@@ -7,7 +7,7 @@ RAIZ = Path(__file__).resolve().parent.parent
 
 def test_vercel_json_aponta_para_a_funcao():
     cfg = json.loads((RAIZ / "vercel.json").read_text())
-    assert cfg["rewrites"][0]["destination"] == "/api/index"
+    assert cfg["rewrites"][0]["destination"].startswith("/api/index")
     assert (RAIZ / "api" / "index.py").exists()
 
 

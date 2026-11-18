@@ -82,6 +82,7 @@ _CONFIGS = {
 def get_config(nome: str | None = None) -> type[BaseConfig]:
     ambiente = (
         nome
+        or os.environ.get("APP_ENV")
         or os.environ.get("FLASK_ENV")
         or ("production" if os.environ.get("VERCEL") else "development")
     ).lower()
