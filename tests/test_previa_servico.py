@@ -39,7 +39,7 @@ def _gravar(previa):
 
 def test_exemplo_de_cc_em_banco_vazio_e_tudo_novo(app):
     p = PreviaImportacaoService().gerar(ARQUIVOS)
-    assert p.erros == () and p.avisos == ()
+    assert p.erros == () and [a.coluna for a in p.avisos] == ["periodicidade"]   # só INF497 (sem turma no quadro)
     assert (p.novos, p.a_atualizar, p.inalterados) == (1 + 49 + 46 + 61, 0, 0)
     assert p.pode_confirmar
 
@@ -54,7 +54,7 @@ def test_previa_nao_grava_nada(app):
 def test_importar_o_exemplo_duas_vezes_a_segunda_e_tudo_inalterado(app):
     _gravar(PreviaImportacaoService().gerar(ARQUIVOS))
     p = PreviaImportacaoService().gerar(ARQUIVOS)   # curso achado pelo nome, sem curso_id
-    assert p.erros == () and p.avisos == ()
+    assert p.erros == () and [a.coluna for a in p.avisos] == ["periodicidade"]   # só INF497 (sem turma no quadro)
     assert (p.novos, p.a_atualizar, p.inalterados) == (0, 0, 1 + 49 + 46 + 61)
     assert not p.pode_confirmar                      # nada a gravar
     assert all(a.mantidos_no_banco == 0 for a in p.arquivos)

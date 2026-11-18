@@ -18,6 +18,9 @@ a{color:var(--accent2)}
 .btn:hover{background:var(--accent2)}
 .btn.sec{background:var(--bg2);border:1px solid var(--border);color:var(--text);font-weight:500}
 .btn.peq{padding:7px 13px;font-size:13px}
+.btn.perigo{background:transparent;border:1px solid var(--red);color:var(--red-ink);font-weight:500}
+.curso .acoes{display:flex;gap:8px;margin-top:auto}
+.curso .acoes .btn{margin-top:0;flex:1}
 .btn:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid var(--accent2);outline-offset:2px}
 
 /* Topo: marca à esquerda, conta à direita */
@@ -135,7 +138,29 @@ function cartaoCurso(c) {
     el('h3', {text: c.nome}),
     meta ? el('div', {class: 'meta', text: meta}) : '',
     el('div', {class: 'num', text: `${plural(c.total_disciplinas, 'disciplina', 'disciplinas')} · ${plural(c.total_turmas, 'turma', 'turmas')}`}),
-    el('a', {class: 'btn peq', href: `/curso/${c.id}`, text: 'Abrir'}));
+    el('div', {class: 'acoes'},
+      el('a', {class: 'btn peq', href: `/curso/${c.id}`, text: 'Abrir'}),
+      c.meu ? botaoExcluir(c) : ''));
+}
+
+// Só o dono vê o botão (o servidor também confere). Confirma antes: apaga disciplinas, turmas, planos e histórico.
+function botaoExcluir(c) {
+  const b = el('button', {class: 'btn perigo peq', type: 'button', text: 'Excluir'});
+  b.addEventListener('click', async () => {
+    const ok = confirm(`Excluir “${c.nome}”?\n\nIsso apaga as disciplinas, turmas, seus planos e seu histórico neste curso. Não dá para desfazer.`);
+    if (!ok) return;
+    b.disabled = true;
+    try {
+      const r = await fetch(`/api/cursos/${c.id}`, {method: 'DELETE'});
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || !j.ok) throw new Error(j.erro || 'Não foi possível excluir.');
+      location.reload();
+    } catch (e) {
+      b.disabled = false;
+      alert(e.message);
+    }
+  });
+  return b;
 }
 
 function telaCursos(cursos) {

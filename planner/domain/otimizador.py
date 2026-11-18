@@ -120,7 +120,10 @@ class ResultadoOtimizacao:
     ciclos: tuple[tuple[int, ...], ...] = ()
     inalcancaveis: tuple[int, ...] = ()
     incluidas_por_requisito: tuple[int, ...] = ()
-    optativas_reservadas: int = 0
+    optativas_reservadas: int = 0      # créditos de optativas pedidos
+    optativas_encaixadas: int = 0      # os que couberam nos semestres existentes
+    optativas_sem_encaixe: int = 0     # os que NÃO couberam (exigiriam semestres a mais)
+    periodo_fim_com_optativas: str | None = None   # fim se as optativas sem encaixe ganhassem semestres
     iteracoes: int = 0
     semente: int = 0
     avisos: tuple[str, ...] = field(default_factory=tuple)
@@ -313,6 +316,27 @@ def distribuir_optativas(cargas: Sequence[int], teto: int | None, faltando: int)
     return extra, criados
 
 
+def encaixar_optativas(cargas: Sequence[int], teto: int | None, faltando: int) -> tuple[list[int], int]:
+    """
+    Como `distribuir_optativas`, mas NUNCA cria semestres: só usa os que existem.
+    Devolve (créditos de optativa por semestre, créditos que não couberam).
+    Sem teto conhecido tudo cabe (reparte no de menor carga).
+    """
+    total = list(cargas)
+    extra = [0] * len(total)
+    if not total:
+        return extra, max(0, faltando)
+    while faltando > 0:
+        abertos = [k for k in range(len(total)) if teto is None or total[k] < teto]
+        if not abertos:
+            break
+        k = min(abertos, key=lambda x: (total[x], x))
+        total[k] += 1
+        extra[k] += 1
+        faltando -= 1
+    return extra, faltando
+
+
 # ── entrada principal ─────────────────────────────────────────────────────────
 def otimizar_plano(
     disciplinas: Mapping[int, Disciplina],
@@ -349,10 +373,11 @@ def otimizar_plano(
                                    incluidas_por_requisito=incluidas, semente=p.semente)
 
     modelo = _Modelo(nos, grafo, disciplinas, turmas_por_disciplina, calendario, p, hmax)
+    modelo.requisitos_originais = requisitos      # o replanejamento ("e se eu reprovar") precisa deles
     lb_grafo = int(menor_horizonte(primeiros))
     livres = primeiros_semestres(grafo, hmax, lambda _n, _t: True)
     lb_livre = int(menor_horizonte(livres))
-    total_cred = sum(modelo.cred) + p.optativas_faltando
+    total_cred = sum(modelo.cred)   # optativas não adiam o prazo: ver `encaixar_optativas`
     lb_cred = math.ceil(total_cred / modelo.cap) if modelo.cap else 0
     limite_inferior = max(lb_grafo, lb_cred, 1)
     if lb_cred > lb_grafo:
@@ -436,7 +461,19 @@ def _montar(modelo, asg, disciplinas, turmas, calendario, p, incluidas, limite_i
 
     semestres: list[SemestreSugerido] = []
     cargas = [sum(disciplinas[d].creditos or 0 for d in ids) for ids in por_sem]
-    extra_opt, _criados = distribuir_optativas(cargas, modelo.cap if modelo else p.max_creditos, p.optativas_faltando)
+    teto_opt = modelo.cap if modelo else p.max_creditos
+    ultimo_obrig = max((k for k, ids in enumerate(por_sem) if ids), default=-1)
+    if ultimo_obrig >= 0:
+        # optativas só entram nos semestres que as obrigatórias já usam; o resto vira aviso
+        extra_opt, sobra = encaixar_optativas(cargas[:ultimo_obrig + 1], teto_opt, p.optativas_faltando)
+        extra_opt += [0] * (len(por_sem) - len(extra_opt))
+        n_novos = (math.ceil(sobra / teto_opt) if teto_opt else 1) if sobra else 0
+        fim_com_opt = calendario.periodo(ultimo_obrig + n_novos)
+    else:
+        # nada de obrigatória a cursar: as optativas são tudo o que falta e formam os próprios semestres
+        extra_opt, _criados = distribuir_optativas([], teto_opt, p.optativas_faltando)
+        sobra = 0
+        fim_com_opt = calendario.periodo(len(extra_opt) - 1) if extra_opt else None
     total_semestres = max(len(por_sem), len(extra_opt))
     por_sem += [[] for _ in range(total_semestres - len(por_sem))]
     cargas += [0] * (total_semestres - len(cargas))
@@ -486,6 +523,8 @@ def _montar(modelo, asg, disciplinas, turmas, calendario, p, incluidas, limite_i
         limitado_por=limitado_por,
         otimo_comprovado=bool(h0) and h0 == limite_inferior and p.semestres_extras == 0 and ultimo + 1 == h0,
         incluidas_por_requisito=tuple(incluidas), optativas_reservadas=p.optativas_faltando,
+        optativas_encaixadas=p.optativas_faltando - sobra, optativas_sem_encaixe=sobra,
+        periodo_fim_com_optativas=fim_com_opt if p.optativas_faltando else metricas.periodo_fim,
         iteracoes=iteracoes, semente=p.semente,
     )
 

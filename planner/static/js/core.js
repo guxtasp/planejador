@@ -196,6 +196,7 @@ const DICAS_DE_PAGINA = {
   calendario: 'A sua semana em horários, com as turmas do plano. Escolha o semestre e a turma de cada disciplina.',
   historico: 'O que você já cursou. É daqui que o Rumo sabe o que está concluído e libera as próximas disciplinas.',
   disciplinas: 'Todas as disciplinas do curso: créditos, em que períodos são ofertadas (par, ímpar ou sempre) e pré-requisitos.',
+  simulador: 'E se eu seguir este plano? Mostra riscos semestre a semestre, a previsão de formatura e sugere um plano melhor.',
 };
 
 function render() {
@@ -206,10 +207,11 @@ function render() {
     calendario: 'Calendário Semanal',
     historico: 'Histórico Acadêmico',
     disciplinas: 'Base de Disciplinas',
+    simulador: 'Simulador',
   };
   document.getElementById('page-title').textContent = titles[S.currentPage] || '';
   document.getElementById('page-hint').textContent = DICAS_DE_PAGINA[S.currentPage] || '';
-  const pages = { dashboard, planner, fluxograma, calendario, historico, disciplinas };
+  const pages = { dashboard, planner, fluxograma, calendario, historico, disciplinas, simulador };
   const fn = pages[S.currentPage];
   if (fn) fn();
 }

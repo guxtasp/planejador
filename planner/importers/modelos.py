@@ -62,7 +62,8 @@ FONTES: dict[str, FonteDeDados] = {f.chave: f for f in (
         tarefa="converter a matriz curricular (PPC) do meu curso em arquivos CSV para um planejador acadêmico",
         regras_extras="""- Gere curso.csv, disciplinas.csv e requisitos.csv. NÃO gere turmas.csv (a oferta de horários vem do quadro de horários).
 - Uma linha por disciplina em disciplinas.csv, inclusive as optativas listadas no documento.
-- Créditos e carga horária: copie do documento; não calcule.""",
+- Créditos e carga horária: copie do documento; não calcule.
+- curso.csv: preencha creditos_optativos_exigidos (créditos de optativas que o aluno precisa cumprir), creditos_obrigatorios e ch_total SE o documento os trouxer; é com eles que o app diz quantas optativas faltam.""",
     ),
     FonteDeDados(
         chave="horarios",
@@ -113,7 +114,7 @@ FORMATOS:
 - tipo do requisito: pre (pré-requisito) | co (correquisito).
 - requisitos "A ou B": use o mesmo valor em grupo_alt nas linhas alternativas (ex.: G1). Sem grupo = todos obrigatórios.
 - periodo_letivo: AAAA/N (ex.: 2026/1). cor: #rrggbb (opcional).
-- periodicidade (disciplinas.csv): sempre | impar | par = em que períodos letivos a disciplina é oferecida (impar = só AAAA/1, par = só AAAA/2). Vazio se o documento não disser.
+- periodicidade (disciplinas.csv): sempre | impar | par = em que períodos letivos a disciplina é oferecida (impar = só AAAA/1, par = só AAAA/2). TODA disciplina precisa de periodicidade: se o documento não disser, deixe vazio e liste o código ao final para eu informar (nunca assuma \"sempre\"). No quadro de horários, quem só tem turma em períodos de uma paridade é dessa paridade.
 - horarios (turmas.csv): "SEG 16:00-18:00 | QUI 14:00-16:00". O "|" separa encontros da MESMA turma (todos obrigatórios).
   Alternativas de matrícula (turma T1 ou T2) são LINHAS diferentes, nunca "|". Dias: SEG TER QUA QUI SEX SAB DOM.
 - codigo_turma é obrigatório em turmas.csv (T1, T2, P1...). Todo código em requisitos/turmas deve existir em disciplinas.csv.

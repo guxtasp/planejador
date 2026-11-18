@@ -1,0 +1,96 @@
+/* ═══════════════════════════════════════════════════════════════════
+   SIMULADOR (Peças 3 e 4). Usa só os tokens de tokens.css; estados nunca dependem só de cor
+   (sempre há ícone + texto). Mesma escala de espaçamento e raio do app.css.
+   ═══════════════════════════════════════════════════════════════════ */
+.sim-controles{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:12px;align-items:end}
+.sim-controles .form-group{margin:0}
+.sim-bloco{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;margin-bottom:16px}
+.sim-bloco h3{font-family:var(--font-display);font-size:16px;margin-bottom:10px}
+.sim-texto{color:var(--text2);font-size:13px;margin:0 0 12px}
+.sim-acoes{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:14px}
+.sim-dica{font-size:12px;color:var(--text3)}
+.sim-ok{font-size:13px;font-weight:600;color:var(--green-ink)}
+
+/* Faixas de estado: trabalhando / certo / erro */
+.sim-faixa{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;border-radius:8px;font-size:13px;margin:0 0 12px;border:1px solid var(--border)}
+.sim-carregando{background:var(--bg3);color:var(--text2)}
+.sim-ok.sim-faixa,.sim-faixa.sim-ok{background:color-mix(in srgb,var(--green) 12%,var(--bg2));border-color:color-mix(in srgb,var(--green) 35%,var(--border));color:var(--green-ink)}
+.sim-erro{background:color-mix(in srgb,var(--red) 10%,var(--bg2));border-color:color-mix(in srgb,var(--red) 35%,var(--border));color:var(--red-ink)}
+.sim-info{background:color-mix(in srgb,var(--blue) 9%,var(--bg2));border-color:color-mix(in srgb,var(--blue) 35%,var(--border))}
+.sim-inline{display:inline-flex;gap:8px;align-items:center}
+.sim-inline .form-input{width:120px}
+.sim-spin{width:14px;height:14px;border-radius:50%;border:2px solid var(--border);border-top-color:var(--accent);display:inline-block;vertical-align:-2px;animation:sim-gira .8s linear infinite}
+@keyframes sim-gira{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.sim-spin{animation:none;border-top-color:var(--border);border-right-color:var(--accent)}}
+
+.sim-nota{font-size:13px;padding:8px 12px;border-radius:8px;background:var(--bg3);color:var(--text2);margin-top:12px}
+.sim-nota.ok{color:var(--green-ink);background:color-mix(in srgb,var(--green) 10%,var(--bg2))}
+.sim-nota.erro{color:var(--red-ink);background:color-mix(in srgb,var(--red) 10%,var(--bg2))}
+
+/* Veredito */
+.sim-veredito{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border-radius:8px;margin-bottom:14px;border:1px solid var(--border);font-size:13px}
+.sim-veredito b{font-size:15px;display:block;margin-bottom:2px}
+.sim-veredito-ico{font-size:20px;line-height:1.2}
+.v-ok{background:color-mix(in srgb,var(--green) 10%,var(--bg2));border-color:color-mix(in srgb,var(--green) 35%,var(--border));color:var(--green-ink)}
+.v-medio{background:color-mix(in srgb,var(--yellow) 14%,var(--bg2));border-color:color-mix(in srgb,var(--yellow) 45%,var(--border));color:var(--yellow-ink)}
+.v-alto{background:color-mix(in srgb,var(--red) 10%,var(--bg2));border-color:color-mix(in srgb,var(--red) 35%,var(--border));color:var(--red-ink)}
+
+/* Riscos */
+.riscos{list-style:none;display:grid;gap:8px;margin:0;padding:0}
+.risco{display:flex;gap:10px;padding:10px 12px;border-radius:8px;border:1px solid var(--border);border-left-width:4px;background:var(--bg3);font-size:13px}
+.risco.g-alta{border-left-color:var(--red)}
+.risco.g-media{border-left-color:var(--yellow)}
+.risco.g-baixa{border-left-color:var(--text3)}
+.risco-ico{font-size:16px;line-height:1.3}
+.risco-acao{color:var(--accent);margin-top:2px}
+.risco-meta{font-size:12px;color:var(--text3);margin-top:4px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.sim-mais{margin-top:12px}
+.sim-mais summary{cursor:pointer;font-size:13px;color:var(--text2);padding:4px 0}
+.sim-mais[open] summary{margin-bottom:8px}
+details.sim-bloco{padding:12px 20px}
+
+/* Linha do tempo */
+.sim-timeline{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+.sim-sem{border:1px solid var(--border);border-radius:var(--radius);padding:12px;background:var(--bg3)}
+.sim-sem.tem-alto{border-color:color-mix(in srgb,var(--red) 55%,var(--border))}
+.sim-sem-topo{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+.sim-carga{font-size:12px;color:var(--text2);margin-bottom:8px}
+.sim-carga .progress-bar{margin-bottom:4px}
+.progress-fill.estouro{background:var(--red)}
+.sim-itens{list-style:none;display:grid;gap:6px;margin:0;padding:0}
+.sim-itens li{display:flex;flex-direction:column;gap:3px;font-size:13px;padding-top:6px;border-top:1px solid var(--border)}
+.sim-itens li:first-child{border-top:none;padding-top:0}
+.sim-selos{display:flex;gap:4px;flex-wrap:wrap;align-items:center}
+.sim-selos small{color:var(--text3);font-size:12px}
+.sim-reserva{color:var(--text3);font-style:italic}
+
+/* E se eu reprovar / caminho crítico */
+.cenarios{list-style:none;display:grid;gap:8px;margin:0 0 10px;padding:0}
+.cenarios li{display:flex;gap:10px;align-items:flex-start;font-size:13px}
+.cenarios .badge{flex:0 0 auto;min-width:84px;justify-content:center}
+.etapas{display:grid;gap:6px;padding-left:0;list-style:none;margin:8px 0}
+.etapas li{font-size:13px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.etapas li b{min-width:56px}
+.sim-premissas{padding-left:18px;display:grid;gap:6px;font-size:13px;color:var(--text2)}
+
+/* Sugestão */
+.sug-form{display:grid;grid-template-columns:repeat(4,1fr) auto;gap:12px;align-items:end;margin-bottom:12px}
+.sug-form .form-group{margin:0}
+
+/* Oferta editável (tela Disciplinas) */
+.oferta-edit{display:inline-flex;align-items:center;gap:8px}
+.oferta-sel{padding:4px 8px;font-size:12px;min-height:30px;width:auto}
+.oferta-estado{font-size:12px;color:var(--text3);min-width:60px}
+.oferta-estado.ok{color:var(--green-ink)}
+.oferta-estado.erro{color:var(--red-ink);font-weight:600}
+
+@media (max-width:700px){
+  .sim-controles,.sug-form{grid-template-columns:1fr}
+  .sim-faixa{flex-direction:column;align-items:flex-start}
+}
+
+.sug-feitas{margin:0 0 12px}
+.sug-feitas summary{cursor:pointer;color:var(--text2)}
+.sug-feitas-lista{display:grid;gap:6px;max-height:220px;overflow:auto;margin-top:8px;padding:8px;border:1px solid var(--border,#ddd);border-radius:8px}
+.sug-feita{display:flex;gap:8px;align-items:baseline;font-size:.9em}
+.sim-nota-aviso{border-left:3px solid var(--amber,#D98E04)}

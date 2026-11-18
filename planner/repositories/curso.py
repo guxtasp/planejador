@@ -1,9 +1,9 @@
 """Consultas de `Curso`."""
 from __future__ import annotations
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import delete, func, or_, select
 
-from ..models import Curso, Disciplina, Turma, Visibilidade
+from ..models import Curso, Disciplina, Historico, Turma, Visibilidade
 from .base import RepositorioBase
 
 
@@ -49,3 +49,18 @@ class CursoRepository(RepositorioBase):
         """Busca um curso pelo nome entre os do mesmo dono (`None` = sem dono)."""
         dono = Curso.dono_id.is_(None) if dono_id is None else Curso.dono_id == dono_id
         return self.sessao.scalar(select(Curso).where(Curso.nome == nome, dono))
+
+    def usuarios_com_historico(self, curso_id: int) -> set[int]:
+        """Ids das contas que têm histórico em disciplinas deste curso."""
+        return set(self.sessao.scalars(
+            select(Historico.usuario_id).distinct()
+            .join(Disciplina, Historico.disciplina_id == Disciplina.id)
+            .where(Disciplina.curso_id == curso_id)))
+
+    def apagar_historico_do_curso(self, curso_id: int) -> None:
+        """
+        Remove o histórico ligado às disciplinas do curso. Necessário antes de apagar o curso:
+        `historico.disciplina_id` é RESTRICT de propósito (o banco recusa apagar disciplina com histórico).
+        """
+        ids = select(Disciplina.id).where(Disciplina.curso_id == curso_id)
+        self.sessao.execute(delete(Historico).where(Historico.disciplina_id.in_(ids)))

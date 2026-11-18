@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from sqlalchemy.orm import Session
 
-from ..api.errors import NotFoundError
+from ..api.errors import ConflictError, NotFoundError, ProibidoError
 from ..models import Curso, Visibilidade
 from ..repositories import CursoRepository, DisciplinaRepository
 
@@ -24,7 +24,8 @@ class CursoService:
         cursos = self._cursos.listar_acessiveis(usuario_id)
         contagens = self._cursos.contagens([c.id for c in cursos])
         return [
-            {**self._resumo(c), "total_disciplinas": contagens[c.id][0], "total_turmas": contagens[c.id][1]}
+            {**self._resumo(c), "total_disciplinas": contagens[c.id][0], "total_turmas": contagens[c.id][1],
+             "meu": usuario_id is not None and c.dono_id == usuario_id}
             for c in cursos
         ]
 
@@ -57,6 +58,27 @@ class CursoService:
                 for d in disciplinas
             ],
         }
+
+    # ── excluir ───────────────────────────────────────────────────────────
+    def excluir(self, curso_id: int, usuario_id: int) -> None:
+        """
+        Apaga o curso e tudo que depende dele (disciplinas, requisitos, turmas, planos, histórico).
+
+        Só o DONO pode. Curso que o visitante nem enxerga dá 404 (não revela que existe); curso
+        público de outra pessoa dá 403. Se OUTRA conta tem histórico nele, não apaga (409): seria
+        destruir dados que não são do dono.
+        """
+        curso = self._curso_acessivel(curso_id, usuario_id)
+        if curso.dono_id != usuario_id:
+            raise ProibidoError("Só quem trouxe o curso pode excluí-lo.")
+        outros = self._cursos.usuarios_com_historico(curso.id) - {usuario_id}
+        if outros:
+            raise ConflictError(
+                "Outras pessoas já registraram histórico neste curso, então ele não pode ser excluído. "
+                "Deixe-o privado para tirá-lo da lista pública.")
+        self._cursos.apagar_historico_do_curso(curso.id)
+        self._cursos.remover(curso)
+        self._cursos.sessao.commit()
 
     # ── internos ──────────────────────────────────────────────────────────
     def _curso_acessivel(self, curso_id: int, usuario_id: int | None) -> Curso:

@@ -31,7 +31,11 @@ Os nomes das colunas ignoram caixa e acento. Os modelos para download têm o cab
 | `turmas.csv` | oferta de um período | disciplina, periodo_letivo, codigo_turma |
 
 `disciplinas.csv` aceita ainda **`periodicidade`**: `sempre` (todo período), `impar` (só `AAAA/1`) ou `par` (só `AAAA/2`).
-Vazio = desconhecido (o simulador estima pela paridade do período sugerido e marca como estimativa). Apelidos aceitos na coluna: `oferta`, `paridade`.
+**Toda disciplina deve ter `periodicidade`.** Vazio continua sendo "desconhecido" (nunca vira `sempre`; o simulador estima pela paridade
+do período sugerido e marca como estimativa), mas a validação mostra um aviso com a lista do que falta, e a tela **Disciplinas** exibe um alerta.
+A validação também avisa quando uma disciplina `par`/`impar` tem turma num período de outra paridade (`2026/1` é ímpar, `2026/2` é par).
+Como preencher: disciplina com turma só em `AAAA/1` → `impar`; só em `AAAA/2` → `par`; nos dois → `sempre`; sem turma no quadro → deixe vazio
+até saber. Apelidos aceitos na coluna: `oferta`, `paridade`.
 
 `turmas.csv` aceita ainda `docente`, `vagas`, `horarios` e **`local`** (sala; vale para todos os encontros da turma).
 O **histórico do aluno não entra por CSV**: ele será informado dentro do app (o que você já cursou é pessoal, não do curso).
@@ -61,6 +65,7 @@ Regras de ouro:
 
 - Chaves: curso = nome · disciplina = código · requisito = (disciplina, requisito, tipo) · turma = (disciplina, período, código da turma).
 - Registro novo é criado; existente com valores diferentes é atualizado; igual fica como está. A prévia mostra cada mudança (antes → depois).
+- Excluir um curso é pela tela inicial (botão **Excluir**, só para o dono) ou `DELETE /api/cursos/<id>`: apaga disciplinas, turmas, planos e o histórico dele. Recusa (409) se outra conta tem histórico no curso.
 - **Célula vazia nunca apaga** um valor já gravado, e **o que não está no arquivo é mantido** (a importação nunca remove).
 - Tudo numa única transação: se algo falhar, nada é gravado.
 - Códigos são comparados sem caixa/acento; `inf110` é a mesma disciplina que `INF110`.

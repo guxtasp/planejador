@@ -144,3 +144,62 @@ def test_planos_nao_ficam_mais_so_no_navegador():
     assert "/planos" in store and "migrarDoNavegador" in store
     for nome in ("page_planner", "page_calendario", "core"):
         assert "PlanoLocal" not in (JS / f"{nome}.js").read_text(encoding="utf-8")
+
+
+# ── exclusão de curso ────────────────────────────────────────────────────────
+def test_dono_exclui_o_curso_e_tudo_que_depende_dele(client, usuario):
+    from planner.models import Disciplina, Historico, Turma
+    curso_id = importar_exemplo(client)
+    disc = db.session.query(Disciplina).filter_by(curso_id=curso_id).first()
+    db.session.add(Historico(usuario_id=usuario.id, disciplina_id=disc.id, status="aprovado"))
+    db.session.commit()
+    r = client.delete(f"/api/cursos/{curso_id}")
+    assert r.status_code == 200 and r.get_json() == {"ok": True}
+    assert client.get("/api/cursos").get_json()["cursos"] == []
+    assert db.session.query(Curso).count() == db.session.query(Disciplina).count() == 0
+    assert db.session.query(Turma).count() == db.session.query(Historico).count() == 0
+
+
+def test_lista_marca_quais_cursos_sao_meus(client):
+    importar_exemplo(client)
+    (c,) = client.get("/api/cursos").get_json()["cursos"]
+    assert c["meu"] is True
+
+
+def test_nao_dono_nao_exclui_curso_publico(client, app):
+    dono = Usuario(email="a@x.com", nome="A")
+    db.session.add(dono)
+    db.session.flush()
+    db.session.add(Curso(nome="Aberto", dono_id=dono.id, visibilidade=Visibilidade.PUBLICO.value))
+    db.session.commit()
+    cid = db.session.query(Curso).one().id
+    assert client.delete(f"/api/cursos/{cid}").status_code == 403
+    assert db.session.query(Curso).count() == 1
+
+
+def test_curso_privado_de_outro_e_inexistente_dao_404(client, app):
+    dono = Usuario(email="a@x.com", nome="A")
+    db.session.add(dono)
+    db.session.flush()
+    db.session.add(Curso(nome="Alheio", dono_id=dono.id, visibilidade=Visibilidade.PRIVADO.value))
+    db.session.commit()
+    cid = db.session.query(Curso).one().id
+    assert client.delete(f"/api/cursos/{cid}").status_code == 404
+    assert client.delete("/api/cursos/99999").status_code == 404
+
+
+def test_excluir_exige_login(app):
+    assert app.test_client().delete("/api/cursos/1").status_code == 401
+
+
+def test_curso_com_historico_de_outra_conta_nao_e_excluido(client, app):
+    from planner.models import Disciplina, Historico
+    curso_id = importar_exemplo(client)
+    outra = Usuario(email="b@x.com", nome="B")
+    db.session.add(outra)
+    db.session.flush()
+    disc = db.session.query(Disciplina).filter_by(curso_id=curso_id).first()
+    db.session.add(Historico(usuario_id=outra.id, disciplina_id=disc.id, status="aprovado"))
+    db.session.commit()
+    assert client.delete(f"/api/cursos/{curso_id}").status_code == 409
+    assert db.session.query(Curso).count() == 1

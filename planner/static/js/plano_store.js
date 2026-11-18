@@ -134,7 +134,11 @@ const Planos = (() => {
     selecionar(id) { atualId = id; gravarChave(CHAVE_ATUAL, String(id)); },
 
     async criar(nome, numSemestres) {
-      const corpo = {nome, semestres: Array.from({length: numSemestres}, (_, i) => ({rotulo: `Semestre ${i + 1}`, periodo_letivo: null, itens: []}))};
+      return this.criarComConteudo({nome, semestres: Array.from({length: numSemestres}, (_, i) => ({rotulo: `Semestre ${i + 1}`, periodo_letivo: null, itens: []}))});
+    },
+
+    // Plano já montado (ex.: a sugestão do Simulador): `{nome, semestres: [{rotulo, periodo_letivo, itens}]}`.
+    async criarComConteudo(corpo) {
       const r = await POST(URL_BASE, corpo);
       if (!r.ok) { toast(r.erro || 'Não foi possível criar o plano.', 'error'); return null; }
       const plano = doServidor(r.plano);

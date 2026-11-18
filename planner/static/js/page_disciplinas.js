@@ -8,7 +8,14 @@ function disciplinas() {
 
   let _q = '';
   const c = document.getElementById('content');
-  c.innerHTML = `
+  const semOferta = S.disciplinas.filter(d => !d.periodicidade);
+  const aviso = semOferta.length ? `
+  <div class="card" role="alert" style="margin-bottom:16px;padding:12px 16px;border-left:3px solid var(--yellow, #d4a017)">
+    <b>${semOferta.length} de ${S.disciplinas.length} disciplina(s) sem oferta informada.</b>
+    Toda disciplina precisa ser marcada como <i>par</i>, <i>ímpar</i> ou <i>sempre</i>: sem isso o simulador só consegue estimar
+    em quais semestres ela existe. Preencha a coluna <code>periodicidade</code> do disciplinas.csv e importe de novo.
+  </div>` : '';
+  c.innerHTML = aviso + `
   <div class="card" style="margin-bottom:16px;padding:12px 16px">
     <div class="search-wrap">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>

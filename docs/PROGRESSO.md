@@ -585,3 +585,11 @@ Baseline antes das peças: 637 testes passando.
 - Créditos de optativas que faltam viram um bloco "reservar N créditos", sem inventar disciplinas.
 - Período inicial da simulação: o primeiro semestre do plano, ou o informado na tela (nunca assumido pela data do servidor).
 - Otimizador determinístico (semente) e só com a biblioteca padrão; domínio continua puro (`test_domain_pureza`).
+
+
+## Rodada: periodicidade obrigatória na validação, exclusão de curso, CSV atualizado
+- **Validação:** `periodicidade_nao_informada` (aviso único com a lista) e `turma_em_periodo_incompativel` (turma em período de paridade diferente da cadastrada) em `importers/validacao/semantico.py`. Continuam avisos (vazio = desconhecido).
+- **Tela Disciplinas:** alerta quando há disciplina sem oferta informada.
+- **Exclusão de curso:** `DELETE /api/cursos/<id>` (só dono; 403 não dono, 404 inexistente/privado alheio, 409 se outra conta tem histórico). Apaga o histórico do dono antes (FK `RESTRICT`). Botão **Excluir** nos cartões da tela inicial (`/api/cursos` devolve `meu`).
+- **CSV de exemplo:** `disciplinas.csv` ganhou a coluna `periodicidade` (INF497 fica vazia: sem turma no quadro). Por isso a prévia do exemplo agora tem **1 aviso** (testes ajustados).
+- **Não executado por mim:** `pytest` completo e navegador (ambiente sem SQLAlchemy). Só rodei os testes novos de validação (sem banco) e a prévia do exemplo real.

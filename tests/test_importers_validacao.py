@@ -42,7 +42,8 @@ def erros(p):
 
 
 def avisos(p):
-    return problemas(p, Severidade.AVISO)
+    """Avisos das regras testadas aqui; o de periodicidade tem testes próprios (test_periodicidade_validacao)."""
+    return [a for a in problemas(p, Severidade.AVISO) if a[2] != "periodicidade"]
 
 
 def arquivo(p, nome):

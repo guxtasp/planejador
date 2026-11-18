@@ -19,7 +19,8 @@ from typing import Callable
 
 from ...domain.ciclos import componentes_ciclicos
 from ...domain.conflitos import encontros_se_sobrepoem
-from ...domain.entidades import REQ_PRE
+from ...domain.entidades import PER_SEMPRE, REQ_PRE
+from ...domain.periodicidade import paridade_do_periodo
 from .contexto import ContextoValidacao
 from .estagio import Estagio
 
@@ -35,16 +36,19 @@ class _Efetiva:
     periodo_sugerido: int | None = None
     creditos: int | None = None
     carga_h: int | None = None
+    periodicidade: str | None = None
 
 
 def _disciplinas_efetivas(ctx: ContextoValidacao) -> dict[str, _Efetiva]:
-    efetivas = {d.codigo: _Efetiva(d.periodo_sugerido, d.creditos, d.carga_h) for d in ctx.estado.disciplinas}
+    efetivas = {d.codigo: _Efetiva(d.periodo_sugerido, d.creditos, d.carga_h, d.periodicidade)
+                for d in ctx.estado.disciplinas}
     for d in ctx.ativos("disciplinas.csv"):
         antes = efetivas.get(d.codigo, _Efetiva())
         efetivas[d.codigo] = _Efetiva(
             d.periodo_sugerido if d.periodo_sugerido is not None else antes.periodo_sugerido,
             d.creditos if d.creditos is not None else antes.creditos,
             d.carga_h if d.carga_h is not None else antes.carga_h,
+            d.periodicidade if d.periodicidade is not None else antes.periodicidade,
         )
     return efetivas
 
@@ -177,6 +181,47 @@ def periodo_acima_da_duracao(ctx: ContextoValidacao) -> None:
                       f"mas o curso tem {duracao} semestre(s).")
 
 
+MAX_CODIGOS_NO_AVISO = 12
+
+
+def periodicidade_nao_informada(ctx: ContextoValidacao) -> None:
+    """
+    Toda disciplina precisa de `periodicidade` (par, ímpar ou sempre).
+
+    Sem ela o simulador e o otimizador só conseguem ESTIMAR em que semestres a disciplina existe,
+    e estimativa pode errar. Continua sendo AVISO (vazio = desconhecido, nunca \"sempre\"), mas é
+    um aviso único e explícito, com a lista do que falta, para ninguém deixar passar.
+    """
+    efetivas = _disciplinas_efetivas(ctx)
+    ativas = ctx.ativos("disciplinas.csv")
+    faltando = [d for d in ativas if efetivas[d.codigo].periodicidade is None]
+    if not faltando:
+        return
+    codigos = ", ".join(d.codigo for d in faltando[:MAX_CODIGOS_NO_AVISO])
+    resto = len(faltando) - MAX_CODIGOS_NO_AVISO
+    sufixo = f" e mais {resto}" if resto > 0 else ""
+    ctx.aviso("disciplinas.csv", faltando[0].linha, "periodicidade",
+              f"{len(faltando)} de {len(ativas)} disciplina(s) sem `periodicidade` (par, impar ou sempre): "
+              f"{codigos}{sufixo}. Informe todas; sem isso o plano usa uma ESTIMATIVA da oferta.")
+
+
+def turma_em_periodo_incompativel(ctx: ContextoValidacao) -> None:
+    """Disciplina `par`/`impar` com turma num período de outra paridade: um dos dois dados está errado."""
+    efetivas = _disciplinas_efetivas(ctx)
+    for t in ctx.ativos("turmas.csv"):
+        per = efetivas.get(t.disciplina, _Efetiva()).periodicidade
+        if per in (None, PER_SEMPRE):
+            continue
+        try:
+            paridade = paridade_do_periodo(t.periodo_letivo)
+        except ValueError:
+            continue
+        if paridade != per:
+            ctx.aviso("turmas.csv", t.linha, "periodo_letivo",
+                      f"{t.disciplina} está como \"{per}\", mas tem turma em {t.periodo_letivo} "
+                      f"(período {paridade}). Corrija a periodicidade ou o período da turma.")
+
+
 def tipo_da_disciplina_mudou(ctx: ContextoValidacao) -> None:
     """Trocar obrigatória↔optativa muda o cálculo de progresso: vale um aviso explícito."""
     anteriores = {d.codigo: d.tipo for d in ctx.estado.disciplinas}
@@ -195,6 +240,8 @@ REGRAS: tuple[Callable[[ContextoValidacao], None], ...] = (
     razao_creditos_carga_horaria,
     periodo_acima_da_duracao,
     tipo_da_disciplina_mudou,
+    periodicidade_nao_informada,
+    turma_em_periodo_incompativel,
 )
 
 

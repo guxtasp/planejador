@@ -27,7 +27,7 @@ def test_validar_devolve_a_previa_sem_gravar(client):
     r = client.post("/api/importacao/validar", data=multipart(), content_type="multipart/form-data")
     j = r.get_json()
     assert r.status_code == 200 and j["ok"] and j["previa"]["pode_confirmar"]
-    assert j["previa"]["totais"] == {"novos": 157, "a_atualizar": 0, "inalterados": 0, "erros": 0, "avisos": 0}
+    assert j["previa"]["totais"] == {"novos": 157, "a_atualizar": 0, "inalterados": 0, "erros": 0, "avisos": 1}
     # nada foi gravado: confirmar ainda cria o curso
     assert client.post("/api/importacao/confirmar", data=multipart(), content_type="multipart/form-data").status_code == 201
 

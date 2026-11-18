@@ -4,6 +4,7 @@ Rotas de cursos e do onboarding (Etapa 4A). Só traduzem HTTP ⇄ services.
   GET /api/cursos                         cursos que o visitante pode abrir (públicos + os seus)
   GET /api/cursos/<id>                    dados de um curso
   GET /api/cursos/<id>/disciplinas        curso + catálogo (disciplinas e requisitos)
+  DELETE /api/cursos/<id>                 exclui o curso (só o dono) e tudo que depende dele
   GET /                                   onboarding: escolher curso ou trazer um novo
   GET /curso/<id>                         planejador do curso
 """
@@ -13,7 +14,7 @@ from flask import Blueprint, jsonify, redirect, render_template, request
 
 from ..services.cursos import CursoService
 from .errors import NotFoundError
-from .sessao import usuario_atual, usuario_atual_id
+from .sessao import login_obrigatorio, usuario_atual, usuario_atual_id
 
 bp = Blueprint("cursos", __name__, url_prefix="/api/cursos")
 bp_pagina = Blueprint("cursos_pagina", __name__)
@@ -27,6 +28,13 @@ def listar():
 @bp.get("/<int:curso_id>")
 def obter(curso_id: int):
     return jsonify({"ok": True, "curso": CursoService().obter(curso_id, usuario_atual_id())})
+
+
+@bp.delete("/<int:curso_id>")
+@login_obrigatorio
+def excluir(curso_id: int):
+    CursoService().excluir(curso_id, usuario_atual_id())
+    return jsonify({"ok": True})
 
 
 @bp.get("/<int:curso_id>/disciplinas")
