@@ -91,7 +91,7 @@ function gradeDoCalendario(eventos) {
 function renderCalendar(semId) {
   const sem = semestreDoCalendario(semId);
   if (!sem) {
-    return `<div class="empty" style="padding:60px">${TEXTO_VAZIO_CALENDARIO}Selecione um semestre para visualizar o calendário</div>`;
+    return `<div class="empty" style="padding:60px">${TEXTO_VAZIO_CALENDARIO}Escolha um semestre</div>`;
   }
 
   // Só conflito CONFIRMADO (turmas já escolhidas) é pintado de vermelho.
@@ -139,11 +139,11 @@ function renderCalendar(semId) {
       const top = (minutos(ev.inicio) - grade.hora_inicio * 60) * porMinuto;
       const h = (minutos(ev.fim) - minutos(ev.inicio)) * porMinuto;
       html += `<div style="position:absolute;top:${top+2}px;left:calc(${col*larg}% + 2px);width:calc(${larg}% - 4px);height:${h-4}px;box-sizing:border-box;
-        background:rgba(${hexToRgb(d.cor)},.25);border:1px solid ${esc(d.cor)};
+        background:rgba(${hexToRgb(d.cor)},.18);border:1px solid ${esc(d.cor)};border-left:4px solid ${esc(d.cor)};
         border-radius:5px;padding:3px 5px;cursor:pointer;
         ${ev.conflito?'outline:2px solid var(--red);outline-offset:-2px':''}
         overflow:hidden" onclick="${ev.turma.propria ? `editarHorarios(${sem.id},${d.id})` : `showDiscDetail(${d.id})`}" title="${esc(d.nome)} — turma ${esc(ev.turma.codigo_turma)} (${ev.inicio}–${ev.fim})">
-        <div style="font-size:9px;font-weight:700;color:${esc(d.cor)}">${esc(d.codigo)} · ${esc(ev.turma.codigo_turma)}</div>
+        <div style="font-size:10px;font-weight:700;color:var(--text)">${esc(d.codigo)} · ${esc(ev.turma.codigo_turma)}</div>
         <div style="font-size:9px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(d.nome)}</div>
         ${ev.local ? `<div style="font-size:9px;color:var(--text2)">${esc(ev.local)}</div>` : ''}
         ${ev.conflito ? '<div style="font-size:9px;color:var(--red)">⚠️ Conflito</div>' : ''}
@@ -160,7 +160,7 @@ function renderCalendar(semId) {
 function renderPendentesCalendario(semId) {
   const sem = semestreDoCalendario(semId);
   if (!sem) return '';
-  if (!sem.itens.length) return `<p style="margin-top:12px;font-size:12px;color:var(--text3)">Este semestre ainda não tem disciplinas. Monte-o em <a href="#" onclick="irPara('planner');return false">Planejamento</a>.</p>`;
+  if (!sem.itens.length) return `<p style="margin-top:12px;font-size:12px;color:var(--text3)"><button class="btn btn-primary btn-sm" onclick="irPara('planner')">+ Adicionar disciplinas</button></p>`;
 
   const fora = sem.itens.map(i => ({i, d: S.disciplinas.find(x => x.id === i.disciplina_id)}))
     .filter(({i, d}) => d && !i.turma_id && !encontrosLivresDe(i).length)

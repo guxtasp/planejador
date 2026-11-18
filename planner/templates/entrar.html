@@ -5,13 +5,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!-- A volta do link do e-mail traz o token no endereço (#access_token=...): não o repasse por Referer. -->
 <meta name="referrer" content="no-referrer">
-<title>Entrar — Planejador Acadêmico</title>
+<title>Entrar — Trilha</title>
+<link rel="icon" type="image/svg+xml" href="/static/img/trilha.svg">
+<link rel="stylesheet" href="/static/css/tokens.css">
 <link rel="stylesheet" href="/static/css/telas_simples.css">
 </head>
 <body>
-<h1>📚 Entrar</h1>
+<a class="marca" href="/" style="font-size:22px;margin-top:8px"><img src="/static/img/trilha.svg" alt="">Trilha</a>
+<h1>Entrar</h1>
 
 <main class="caixa">
+  <button class="btn" id="google" type="button" style="display:none">Entrar com Google</button>
   <form id="form" novalidate>
     <label for="email">E-mail</label>
     <input id="email" type="email" autocomplete="email" inputmode="email" placeholder="nome@exemplo.com" required autofocus>
@@ -67,12 +71,45 @@ async function supabase(caminho, corpo, query = '') {
   return {ok: r.ok, status: r.status, dados: j};
 }
 
+// ── espera entre pedidos: evita bater no limite do Supabase (1 e-mail por endereço a cada ~60 s) ──
+const CHAVE_ESPERA = 'planejador:espera';       // instante (ms) em que um novo pedido é liberado
+let relogio = null;
+function esperaRestante() { return Math.max(0, Math.ceil(((Number(ler(CHAVE_ESPERA)) || 0) - Date.now()) / 1000)); }
+function iniciarEspera(segundos) {
+  guardar(CHAVE_ESPERA, String(Date.now() + segundos * 1000));
+  atualizarBotao();
+}
+function atualizarBotao() {
+  clearInterval(relogio);
+  const botao = $('enviar'), base = 'Receber link';
+  const tick = () => {
+    const falta = esperaRestante();
+    botao.disabled = falta > 0;
+    botao.textContent = falta > 0 ? `${base} (aguarde ${falta}s)` : base;
+    if (falta <= 0) clearInterval(relogio);
+  };
+  tick(); relogio = setInterval(tick, 500);
+}
+
+function segundosDoErro(dados) {
+  const m = /(\d+)\s*seconds?/i.exec(dados.msg || dados.message || dados.error_description || '');
+  return m ? Math.min(Number(m[1]) + 1, 3600) : 60;
+}
+
 async function pedirLink(email) {
   // O link volta para esta página (cadastre-a em "Redirect URLs" no Supabase).
   const volta = encodeURIComponent(location.origin + '/entrar');
   const r = await supabase('otp', {email, create_user: true}, `?redirect_to=${volta}`);
-  if (r.status === 429) return mostrar('Muitos pedidos seguidos. Aguarde um minuto e tente de novo.', 'erro');
+  if (r.status === 429) {
+    const limiteDoServico = r.dados.error_code === 'over_email_send_rate_limit';
+    iniciarEspera(limiteDoServico ? 300 : segundosDoErro(r.dados));
+    $('form-codigo').hidden = false;      // um e-mail enviado há pouco ainda vale: dá para usar o código dele
+    return mostrar(limiteDoServico
+      ? 'O limite de e-mails do serviço foi atingido. Se você já recebeu um e-mail, use o link ou o código dele; senão, tente de novo em alguns minutos.'
+      : 'Você já pediu há pouco. Use o link ou o código do último e-mail; um novo pedido será liberado em instantes.', 'erro');
+  }
   if (!r.ok) return mostrar('Não foi possível enviar o e-mail agora. Tente de novo.', 'erro');
+  iniciarEspera(60);
   mostrar('Enviado. Abra o link no e-mail ou digite o código abaixo.', 'ok');
   $('form-codigo').hidden = false; $('codigo').focus();
 }
@@ -88,6 +125,7 @@ $('form').addEventListener('submit', async e => {
   e.preventDefault();
   const email = $('email').value.trim();
   if (!email) return mostrar('Digite o seu e-mail.', 'erro');
+  if (LOGIN.provedor !== 'dev' && esperaRestante() > 0) return;   // duplo clique / Enter durante a espera
   guardar(CHAVE_PROXIMO, PROXIMO);
   $('enviar').disabled = true;
   try {
@@ -106,6 +144,17 @@ $('form-codigo').addEventListener('submit', async e => {
   catch (err) { mostrar('Sem conexão. Verifique e tente de novo.', 'erro'); }
   finally { $('confirmar').disabled = false; }
 });
+
+if (LOGIN.provedor === 'supabase') {
+  // Google: o Supabase leva ao login do Google e volta para cá com #access_token=… (tratado abaixo).
+  // Só Google: o formulário de e-mail (link/código) fica escondido. Para reativá-lo, remova a linha abaixo.
+  $('google').style.display = 'inline-block'; $('form').hidden = true;
+  $('google').addEventListener('click', () => {
+    guardar(CHAVE_PROXIMO, PROXIMO);
+    location.href = `${LOGIN.url}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(location.origin + '/entrar')}`;
+  });
+}
+if (LOGIN.provedor === 'dev') {} else if (!$('form').hidden) atualizarBotao();   // retoma a contagem se a página foi recarregada
 
 // ── volta do link do e-mail: o Supabase devolve o token (ou o erro) no #fragmento ─────────────
 (function () {

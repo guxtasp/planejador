@@ -40,7 +40,7 @@ window.renderDiscTable = function(q) {
           const prereqs = d.prerequisitos||[];
           return `<tr style="border-bottom:1px solid var(--border)" onmouseenter="this.style.background='var(--bg3)'" onmouseleave="this.style.background=''">
             <td style="padding:10px 14px">
-              <span style="font-size:12px;font-weight:700;color:${esc(d.cor)}">${esc(d.codigo)}</span>
+              <span style="font-size:12px;font-weight:700;color:var(--text);border-left:3px solid ${esc(d.cor)};padding-left:8px">${esc(d.codigo)}</span>
             </td>
             <td style="padding:10px 14px;font-size:13px;font-weight:500">${esc(d.nome)}</td>
             <td style="padding:10px 14px;font-size:12px;color:var(--text2)">${periodStr(d.periodo)}</td>

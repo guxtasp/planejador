@@ -45,19 +45,20 @@ function conflitosPorDisciplina(analise) {
 // ── página ───────────────────────────────────────────────────────────────
 function planner() {
   const tb = document.getElementById('topbar-actions');
-  tb.innerHTML = `
-    <select class="form-select" style="width:200px;padding:6px 10px;font-size:13px" onchange="switchPlano(+this.value)">
+  // Sem plano não há o que escolher nem excluir: a barra fica vazia e a tela oferece "+ Criar plano".
+  tb.innerHTML = S.planos.length ? `
+    <select class="form-select" aria-label="Plano" style="width:200px;padding:6px 10px;font-size:13px" onchange="switchPlano(+this.value)">
       ${S.planos.map(p=>`<option value="${p.id}" ${p.id===S.currentPlano?'selected':''}>${esc(p.nome)}</option>`).join('')}
     </select>
     <button class="btn btn-ghost btn-sm" onclick="newPlanoModal()">+ Novo plano</button>
-    ${S.planos.length ? `<button class="btn btn-ghost btn-sm" title="Excluir este plano" onclick="excluirPlanoAtual()">🗑</button>` : ''}
-  `;
+    <button class="btn btn-ghost btn-sm" title="Excluir este plano" aria-label="Excluir este plano" onclick="excluirPlanoAtual()">🗑</button>
+  ` : '';
 
   const plano = Planos.atual();
   const c = document.getElementById('content');
 
   if (!plano) {
-    c.innerHTML = `<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/></svg>Nenhum plano encontrado.<br><button class="btn btn-primary" onclick="newPlanoModal()">Criar plano</button></div>`;
+    c.innerHTML = `<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/></svg><div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:12px">Nenhum plano</div><button class="btn btn-primary" onclick="newPlanoModal()">+ Criar plano</button></div>`;
     return;
   }
 

@@ -24,7 +24,7 @@
 | 5B-3 | Calendário livre: horários próprios por disciplina (sem depender de quadro importado) | ✅ Concluída — 🛑 aguardando `pytest` completo + `flask db upgrade` e validação |
 | 6   | Deploy Vercel + Postgres, CI | 🟡 Arquivos prontos (`api/index.py`, `vercel.json`, CI, `docs/DEPLOY.md`); falta o deploy real 🛑 |
 | 7   | Documentação final (IMPORTACAO.md, README, DEPLOY.md) | 🟡 README e DEPLOY.md atualizados; revisar IMPORTACAO.md |
-| Futuro | **Melhorar UI e comunicabilidade. Nada explicativo: aprende-se só testando** (ver Tarefas futuras) | ⬜ |
+| Futuro | **Melhorar UI e comunicabilidade. Nada explicativo: aprende-se só testando** (ver Tarefas futuras) | ⏳ 1ª passada feita |
 
 Legenda: ✅ feito · ⏳ em andamento/próxima · ⬜ pendente · 🛑 parar para validação do usuário
 
@@ -540,3 +540,23 @@ Problema: o calendário só mostrava encontros de **turmas importadas**; sem qua
 
 ## Etapa 7 (parcial)
 - `docs/DEPLOY.md` reescrito (Supabase: pooler de transação p/ o app e de sessão p/ migrações; Vercel: variáveis; URLs de redirect `/entrar`). `README.md` com descrição e link. Falta revisar `IMPORTACAO.md` e executar o deploy (com o usuário).
+
+
+## Tarefa futura — UI/comunicabilidade (1ª passada)
+- Início: estado vazio sem tutorial (título + 1 botão "+ Trazer meu curso"); removidos subtítulo e dicas; cartão "Abrir"; "Seus cursos".
+- Dashboard/Fluxograma: aviso de histórico vazio reduzido a "Histórico vazio." + botão "+ Informar histórico".
+- Planejador: sem plano → só "+ Criar plano". Calendário: "Escolha um semestre"; semestre vazio → botão "+ Adicionar disciplinas". Histórico vazio → "+ Adicionar disciplina".
+- Login: só Google (formulário de e-mail escondido; ver `entrar.html`); espera visível entre pedidos de e-mail.
+- Desempenho: `loadData` carrega tudo em paralelo e uma vez (não refaz a cada aba); CSS/JS com cache de 10 min em produção.
+- **Passada visual (CSS/JS):** `app.css` (bloco "UX/UI" no fim): contraste do texto secundário, piso de 11px, foco de teclado visível, esqueleto de carregamento, toasts com ícone/clique para fechar, janela fecha com Esc e foca o 1º campo, menu acessível por teclado, **layout de celular** (menu vira barra inferior), `prefers-reduced-motion`. Planejador sem plano: barra vazia + "Nenhum plano"/"+ Criar plano".
+- Verificação: `pytest` = 603 passaram (10 erros pré-existentes em `test_export_legacy_seed`/legacy, ambiente sem `flask_cors`); app subido localmente com o curso exemplo e capturas de tela de todas as telas (desktop e 390px) sem erros de JS.
+- Falta revisar `importacao.html` (353 linhas, ainda com muito texto) e o modal de histórico/planejador (feedback imediato).
+
+
+## Rebranding — Trilha
+- **Nome/símbolo:** "Trilha" (antes "Planejador Acadêmico"); símbolo = linha de metrô com início vazado e terminal amarelo (`static/img/trilha.svg`, também favicon). Conceito: o curso é uma linha; períodos são estações; a formatura é o terminal.
+- **Tokens:** `static/css/tokens.css` é a fonte única de cores/tipografia (claro "papel de mapa" por padrão; escuro automático via `prefers-color-scheme`). Cada estado é uma "linha" com cor própria: verde=concluída, amarelo=cursando, azul=disponível, magenta=planejada, cinza=bloqueada, vermelho=conflito. Variantes `--*-ink` garantem contraste de texto nos dois temas.
+- **Tipografia:** Bricolage Grotesque (títulos, números) + Public Sans (interface), **hospedadas em `static/fonts/`** (sem CDN; licença OFL em `static/fonts/LICENSE-*.txt`).
+- **Elemento de assinatura:** fluxograma com linha de metrô (estação do período: verde=concluído, amarelo=em curso) e "caminho" de progresso na barra lateral.
+- Telas `inicio`, `entrar`, `entrar_confirmar`, `importacao` e o app usam os mesmos tokens. Cores de disciplina vindas dos dados agora só aparecem como borda/ponto (nunca como texto).
+- Verificação: capturas em claro, escuro e 390px; 0 erros de JS. Falta revisar `importacao.html` visualmente e o modal de detalhe da disciplina nos dois temas.

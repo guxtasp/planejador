@@ -31,8 +31,8 @@ function dashboard() {
 
   c.innerHTML = `
   ${semHistorico ? `<div class="hint" style="margin-bottom:16px;display:flex;align-items:center;gap:12px;font-size:12px;color:var(--text3)">
-    Os números abaixo partem de um histórico vazio.
-    <button class="btn btn-primary btn-sm" onclick="irPara('historico')">Informar histórico</button></div>` : ''}
+    Histórico vazio.
+    <button class="btn btn-primary btn-sm" onclick="irPara('historico')">+ Informar histórico</button></div>` : ''}
   <div class="grid-4" style="margin-bottom:20px">
     <div class="stat-card">
       <div class="stat-label">Progresso Geral</div>
@@ -64,7 +64,7 @@ function dashboard() {
   </div>
 
   <div class="card">
-    <div style="font-size:13px;font-weight:700;margin-bottom:14px">📊 Distribuição por Período</div>
+    <div style="font-size:13px;font-weight:700;margin-bottom:14px">Distribuição por período</div>
     <div style="display:flex;gap:16px;overflow-x:auto;padding-bottom:8px">
       ${renderPeriodBars()}
     </div>
@@ -110,7 +110,7 @@ function renderPeriodBars() {
     return `<div style="min-width:60px;text-align:center">
       <div style="font-size:10px;color:var(--text3);margin-bottom:6px">${p === 'sem' ? '–' : esc(p) + 'º'}</div>
       <div style="height:80px;width:40px;background:var(--bg4);border-radius:4px;margin:0 auto;position:relative;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end">
-        ${g.cursando > 0 ? `<div style="height:${g.cursando / g.total * 100}%;background:#f59e0b;opacity:.8"></div>` : ''}
+        ${g.cursando > 0 ? `<div style="height:${g.cursando / g.total * 100}%;background:var(--yellow);opacity:.9"></div>` : ''}
         <div style="height:${pct}%;background:var(--green);opacity:.9"></div>
       </div>
       <div style="font-size:11px;color:var(--text);margin-top:4px">${pct}%</div>

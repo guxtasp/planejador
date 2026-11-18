@@ -1,0 +1,62 @@
+/* ═══════════════════════════════════════════════════════════════════
+   TRILHA — identidade visual (fonte única de cores e tipografia)
+   Conceito: o curso é uma linha de metrô. Períodos são estações; a formatura é o terminal.
+   Claro por padrão ("papel de mapa"); escuro segue o sistema. Tudo que muda de tema está aqui.
+   ═══════════════════════════════════════════════════════════════════ */
+@font-face{font-family:"Bricolage Grotesque";font-style:normal;font-weight:200 800;font-display:swap;
+  src:url(/static/fonts/bricolage-grotesque-latin-wght-normal.woff2) format("woff2-variations");
+  unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"Bricolage Grotesque";font-style:normal;font-weight:200 800;font-display:swap;
+  src:url(/static/fonts/bricolage-grotesque-latin-ext-wght-normal.woff2) format("woff2-variations");
+  unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+1E00-1E9F,U+1EF2-1EFF,U+20A0-20AB,U+20AD-20C0}
+@font-face{font-family:"Public Sans";font-style:normal;font-weight:100 900;font-display:swap;
+  src:url(/static/fonts/public-sans-latin-wght-normal.woff2) format("woff2-variations");
+  unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"Public Sans";font-style:normal;font-weight:100 900;font-display:swap;
+  src:url(/static/fonts/public-sans-latin-ext-wght-normal.woff2) format("woff2-variations");
+  unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+1E00-1E9F,U+1EF2-1EFF,U+20A0-20AB,U+20AD-20C0}
+
+:root{
+  /* Superfícies */
+  --bg:#EEF1F5;          /* papel de mapa */
+  --bg2:#FFFFFF;         /* cartões e painéis */
+  --bg3:#F5F7FA;         /* campos, linhas de tabela */
+  --bg4:#E4E9F0;         /* hover, trilhos de barra */
+  --border:#D3DAE4;
+  /* Texto */
+  --text:#0E1A2B;        /* tinta */
+  --text2:#44546A;
+  --text3:#62728A;
+  /* Linha principal (azul) e estados: cada estado é uma "linha" com cor própria */
+  --accent:#1F4FD8;  --accent2:#1A3FA8;  --on-accent:#FFFFFF;
+  --green:#0E8F5F;   --green-ink:#0B6B48;     /* concluída */
+  --yellow:#F2B705;  --yellow-ink:#7A5200;    /* cursando */
+  --blue:#2563EB;    --blue-ink:#1D4ED8;      /* disponível / informação */
+  --purple:#A62E8E;  --purple-ink:#85226F;    /* planejada */
+  --red:#C62A2F;     --red-ink:#A31F24;       /* conflito / erro */
+  --radius:10px;
+  --shadow:0 6px 24px rgba(14,26,43,.14);
+  --font-display:"Bricolage Grotesque","Public Sans",system-ui,sans-serif;
+  --font-ui:"Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#0A111C; --bg2:#111A29; --bg3:#172234; --bg4:#1F2D45; --border:#27364F;
+    --text:#E8EEF7; --text2:#A9B7CC; --text3:#8393AC;
+    --accent:#5B8DEF; --accent2:#8FB1F5; --on-accent:#08101D;
+    --green:#2FBF8A; --green-ink:#6EE0B5;
+    --yellow:#F5C242; --yellow-ink:#F7D27A;
+    --blue:#6B9BF2; --blue-ink:#9DBBF7;
+    --purple:#D26BC0; --purple-ink:#E39BD6;
+    --red:#F26D72; --red-ink:#F7A0A3;
+    --shadow:0 6px 24px rgba(0,0,0,.5);
+    color-scheme:dark;
+  }
+}
+body{font-family:var(--font-ui)}
+h1,h2,h3,.stat-value,.fluxo-period-label{font-family:var(--font-display)}
+
+/* Marca: símbolo + nome */
+.marca{display:inline-flex;align-items:center;gap:10px;font-family:var(--font-display);font-weight:700;letter-spacing:-.02em;color:var(--text);text-decoration:none}
+.marca img{width:1.25em;height:1.25em;flex-shrink:0}

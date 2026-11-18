@@ -55,6 +55,7 @@ class TestingConfig(BaseConfig):
 class ProductionConfig(BaseConfig):
     DEBUG = False
     SESSION_COOKIE_SECURE = True
+    SEND_FILE_MAX_AGE_DEFAULT = 600   # CSS/JS ficam 10 min no navegador (antes: cada página os pedia à função)
     AUTH_PROVEDOR = os.environ.get("AUTH_PROVEDOR", "supabase")
     SQLALCHEMY_DATABASE_URI = _normalizar_url_banco(os.environ.get("DATABASE_URL"))
 

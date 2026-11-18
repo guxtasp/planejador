@@ -26,8 +26,8 @@ function fluxograma() {
   const semHistorico = S.historico.length === 0;
   c.innerHTML = `
   ${semHistorico ? `<div class="hint" style="margin-bottom:16px;display:flex;align-items:center;gap:12px;font-size:12px;color:var(--text3)">
-    Sem histórico, só aparecem como disponíveis as disciplinas sem pré-requisito.
-    <button class="btn btn-primary btn-sm" onclick="irPara('historico')">Informar histórico</button></div>` : ''}
+    Histórico vazio.
+    <button class="btn btn-primary btn-sm" onclick="irPara('historico')">+ Informar histórico</button></div>` : ''}
   <div class="legend" style="margin-bottom:16px">
     <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div>Concluída</div>
     <div class="legend-item"><div class="legend-dot" style="background:var(--yellow)"></div>Cursando</div>
@@ -37,9 +37,13 @@ function fluxograma() {
   </div>
   <div id="fluxo-wrap">
     <div class="fluxo-grid">
-      ${Object.entries(byPeriod).sort((a,b)=>(a[0]==='sem'?1e9:+a[0])-(b[0]==='sem'?1e9:+b[0])).map(([p, discs]) => `
-        <div class="fluxo-col">
-          <div class="fluxo-period-label">${p === 'sem' ? 'Sem período sugerido' : esc(p) + 'º Período'}</div>
+      ${Object.entries(byPeriod).sort((a,b)=>(a[0]==='sem'?1e9:+a[0])-(b[0]==='sem'?1e9:+b[0])).map(([p, discs]) => {
+        // Estação do período: verde = tudo concluído, amarela = há disciplina em curso.
+        const sits = discs.map(d => situacaoDe(d.id)?.situacao);
+        const estado = sits.length && sits.every(x => x === 'concluida') ? 'feito' : sits.includes('cursando') ? 'atual' : '';
+        return `
+        <div class="fluxo-col ${estado}">
+          <div class="fluxo-period-label"><span class="estacao"></span>${p === 'sem' ? 'Sem período' : esc(p) + 'º período'}</div>
           ${discs.map(d => {
             const sit = situacaoDe(d.id);
             let chave = sit ? sit.situacao : null;
@@ -59,7 +63,7 @@ function fluxograma() {
             </div>`;
           }).join('')}
         </div>
-      `).join('')}
+      `;}).join('')}
     </div>
   </div>
   `;

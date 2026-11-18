@@ -56,8 +56,9 @@ function toast(msg, type='info', dur=3500) {
   const el = document.createElement('div');
   el.className = `toast toast-${type}`;
   el.textContent = msg;
+  el.addEventListener('click', () => el.remove());
   document.getElementById('toast-area').appendChild(el);
-  setTimeout(() => el.remove(), dur);
+  setTimeout(() => el.remove(), type === 'error' ? Math.max(dur, 6000) : dur);   // erro fica mais tempo
 }
 
 // ═══════════════════════════════════════════════════════
@@ -66,6 +67,8 @@ function toast(msg, type='info', dur=3500) {
 function openModal(html) {
   document.getElementById('modal-box').innerHTML = html;
   document.getElementById('modal-overlay').style.display = 'flex';
+  const primeiro = document.querySelector('#modal-box input:not([type=hidden]), #modal-box select, #modal-box textarea');
+  if (primeiro) primeiro.focus();
 }
 function closeModal() {
   document.getElementById('modal-overlay').style.display = 'none';
@@ -78,13 +81,16 @@ async function navTo(page, el) {
   S.currentPage = page;
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   if (el) el.classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => n.removeAttribute('aria-current'));
+  if (el) el.setAttribute('aria-current', 'page');
+  document.getElementById('content').innerHTML = '<div class="skel-grid"><div class="skel"></div><div class="skel"></div><div class="skel"></div><div class="skel"></div><div class="skel alto"></div></div>';
   document.getElementById('topbar-actions').innerHTML = '';
   await loadData();
   render();
 }
 
 // Cores só de exibição (não são gravadas): usadas quando a disciplina não tem `cor`.
-const COR_PADRAO = {obrigatoria: '#6366f1', optativa: '#14b8a6', eletiva: '#f59e0b'};
+const COR_PADRAO = {obrigatoria: '#1F4FD8', optativa: '#0F9D8A', eletiva: '#D98E04'};
 
 // A API nova usa nomes do banco (`periodo_sugerido`, `requisitos`); as telas
 // herdadas esperam `periodo`, `prerequisitos`, `horarios`. Este é o único
@@ -93,39 +99,49 @@ function adaptarDisciplina(d) {
   return {
     ...d,
     periodo: d.periodo_sugerido,
-    cor: d.cor || COR_PADRAO[d.tipo] || '#6366f1',
+    cor: d.cor || COR_PADRAO[d.tipo] || '#1F4FD8',
     prerequisitos: d.requisitos || [],
     horarios: [],   // horários vêm das turmas (Etapa 4B)
   };
 }
 
+// Carrega tudo UMA vez, com os pedidos em paralelo (antes eram em fila: disciplinas → turmas → histórico…).
+// Catálogo, turmas, planos e histórico só mudam por ações da própria tela, que já atualizam a cópia local
+// (`Planos`, `carregarAluno`); por isso trocar de aba não refaz os pedidos. Só a análise do plano é refeita.
+let carregandoTudo = null;
 async function loadData() {
-  const resp = await GET(`/api/cursos/${CURSO_ID}/disciplinas`);
+  if (!S.curso) {
+    carregandoTudo = carregandoTudo || carregarTudo().finally(() => { carregandoTudo = null; });
+    await carregandoTudo;
+  }
+  if (S.curso && ['planner', 'calendario'].includes(S.currentPage)) await analisarPlano();
+}
+
+async function carregarTudo() {
+  const planosJaCarregados = Planos.carregado();
+  const [resp, oferta, planosOk] = await Promise.all([
+    GET(`/api/cursos/${CURSO_ID}/disciplinas`),
+    GET(`/api/cursos/${CURSO_ID}/turmas`),
+    planosJaCarregados ? true : Planos.carregar(),
+    carregarAluno(),
+  ]);
   if (!resp.ok) {
     toast(resp.erro || 'Não foi possível carregar o curso.', 'error');
-    return;
+    return;                       // S.curso continua nulo: a próxima tentativa recarrega
   }
-  S.curso = resp.curso;
-  document.getElementById('curso-ativo-nome').textContent = S.curso.nome;
-  document.title = `${S.curso.nome} · Planejador Acadêmico`;
-  S.disciplinas = resp.disciplinas.map(adaptarDisciplina);
-
-  const oferta = await GET(`/api/cursos/${CURSO_ID}/turmas`);
   if (oferta.ok) {
     S.turmas = oferta.turmas;
     S.periodos = oferta.periodos;
     S.grade = oferta.grade;
   }
+  S.disciplinas = resp.disciplinas.map(adaptarDisciplina);
+  document.getElementById('curso-ativo-nome').textContent = resp.curso.nome;
+  document.title = `${resp.curso.nome} · Trilha`;
 
-  // Planos: o servidor é carregado UMA vez; depois a cópia local é a fonte (ver plano_store.js).
-  if (!Planos.carregado()) {
-    if (await Planos.carregar()) await Planos.migrarDoNavegador();
-  }
+  if (!planosJaCarregados && planosOk) await Planos.migrarDoNavegador();
   S.planos = Planos.planos();
   S.currentPlano = Planos.atualId();
-
-  await carregarAluno();
-  if (['planner', 'calendario'].includes(S.currentPage)) await analisarPlano();
+  S.curso = resp.curso;           // por último: marca "carregado"
 }
 
 // Histórico e painel do aluno (status, progresso, previsão). Rechamar depois de mudar o histórico.
@@ -138,6 +154,20 @@ async function carregarAluno() {
   S.historico = h.ok ? h.historico : [];
   S.painel = p.ok ? p : null;
   S.situacoes = new Map((S.painel?.disciplinas || []).map(d => [d.id, d]));
+  atualizarCaminho();
+}
+
+// Trecho de linha na barra lateral: quanto do curso já foi percorrido.
+function atualizarCaminho() {
+  const caixa = document.getElementById('caminho');
+  const bruto = S.painel?.progresso?.percentual;
+  const pct = bruto == null ? null : Math.round(bruto);
+  if (!caixa) return;
+  caixa.hidden = pct == null;
+  if (pct == null) return;
+  document.getElementById('caminho-fill').style.width = pct + '%';
+  document.getElementById('caminho-marca').style.left = pct + '%';
+  document.getElementById('caminho-pct').textContent = pct + '%';
 }
 
 // Pede ao servidor o julgamento do plano atual (carga, requisitos, conflitos).
@@ -227,6 +257,6 @@ function periodStr(n) {
 
 function hexToRgb(hex) {
   const r = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  return r ? `${parseInt(r[1],16)},${parseInt(r[2],16)},${parseInt(r[3],16)}` : '99,102,241';
+  return r ? `${parseInt(r[1],16)},${parseInt(r[2],16)},${parseInt(r[3],16)}` : '31,79,216';
 }
 

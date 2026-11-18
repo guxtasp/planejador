@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Trilha">
+  <rect width="32" height="32" rx="8" fill="#1F4FD8"/>
+  <path d="M7 23.5h6V12h12" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="7" cy="23.5" r="3.4" fill="#fff"/><circle cx="7" cy="23.5" r="1.4" fill="#1F4FD8"/>
+  <circle cx="25" cy="12" r="4.4" fill="#F2B705" stroke="#fff" stroke-width="2"/>
+</svg>

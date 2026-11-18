@@ -3,7 +3,9 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Planejador Acadêmico</title>
+<title>Trilha</title>
+<link rel="icon" type="image/svg+xml" href="/static/img/trilha.svg"/>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/tokens.css') }}"/>
 <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}"/>
 </head>
 <body data-curso-id="{{ curso_id }}">
@@ -11,11 +13,14 @@
   <!-- SIDEBAR -->
   <aside id="sidebar">
     <div class="logo">
-      <h1>📚 Planner<br>Acadêmico</h1>
-      <span>Planejamento inteligente</span>
+      <a class="marca" href="/" aria-label="Trilha — início"><img src="/static/img/trilha.svg" alt="">Trilha</a>
       <div class="curso-ativo">
         <div id="curso-ativo-nome">Carregando…</div>
         <a href="/">⇄ Trocar de curso</a>
+      </div>
+      <div class="caminho" id="caminho" hidden>
+        <div class="caminho-trilho" role="img" aria-label="Progresso no curso"><i id="caminho-fill"></i><b id="caminho-marca"></b></div>
+        <div class="caminho-txt"><strong id="caminho-pct">0%</strong> do caminho</div>
       </div>
     </div>
     <nav>

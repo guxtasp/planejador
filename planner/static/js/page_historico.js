@@ -43,7 +43,7 @@ function historico() {
       <tbody>
         ${S.historico.length === 0
           ? `<tr><td colspan="8" class="empty" style="padding:40px;text-align:center">
-               <button class="btn btn-primary" onclick="historicoModal()">+ Adicionar a primeira disciplina</button></td></tr>`
+               <button class="btn btn-primary" onclick="historicoModal()">+ Adicionar disciplina</button></td></tr>`
           : S.historico.map(h => `
           <tr style="border-bottom:1px solid var(--border)" onmouseenter="this.style.background='var(--bg3)'" onmouseleave="this.style.background=''">
             <td style="${celula};font-size:12px;font-weight:700;color:var(--text3)">${esc(h.codigo)}</td>

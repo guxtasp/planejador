@@ -19,7 +19,7 @@ function showDiscDetail(id) {
 
   openModal(`
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
-      <div style="width:48px;height:48px;border-radius:10px;background:rgba(${hexToRgb(d.cor)},.2);border:2px solid ${cor};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:${cor}">${esc(d.codigo.slice(0,4))}</div>
+      <div style="width:48px;height:48px;border-radius:10px;background:rgba(${hexToRgb(d.cor)},.2);border:2px solid ${cor};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:var(--text)">${esc(d.codigo.slice(0,4))}</div>
       <div>
         <div style="font-size:11px;color:var(--text3);font-weight:700;letter-spacing:.06em">${esc(d.codigo)}</div>
         <h2 style="margin-bottom:2px;font-size:17px">${esc(d.nome)}</h2>
