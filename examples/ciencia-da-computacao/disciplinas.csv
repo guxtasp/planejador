@@ -1,0 +1,50 @@
+﻿codigo,nome,creditos,carga_h,periodo_sugerido,tipo,cor
+INF110,Programação I,6,90,1,obrigatoria,#3b82f6
+INF150,Introdução aos Sistemas Lógicos,2,30,1,obrigatoria,#8b5cf6
+INF191,Introdução à Ciência da Computação,2,30,1,obrigatoria,#10b981
+MAT131,Introdução à Álgebra,4,60,1,obrigatoria,#f59e0b
+MAT140,Cálculo I,4,60,1,obrigatoria,#f59e0b
+EST105,Iniciação à Estatística,4,60,2,obrigatoria,#f59e0b
+INF112,Programação II,6,90,2,obrigatoria,#3b82f6
+LET215,Inglês I,4,60,2,obrigatoria,#06b6d4
+MAT135,Geometria Analítica e Álgebra Linear,6,90,2,obrigatoria,#f59e0b
+MAT147,Cálculo II,4,60,2,obrigatoria,#f59e0b
+INF130,Teoria da Computação,4,60,3,obrigatoria,#6366f1
+INF213,Estruturas de Dados,6,90,3,obrigatoria,#3b82f6
+INF230,Matemática Discreta,4,60,3,obrigatoria,#6366f1
+INF280,Pesquisa Operacional I,4,60,3,obrigatoria,#84cc16
+MAT241,Cálculo III,4,60,3,obrigatoria,#f59e0b
+INF220,Banco de Dados I,4,60,4,obrigatoria,#06b6d4
+INF222,Computação Experimental,2,30,4,obrigatoria,#64748b
+INF250,Organização de Computadores,4,60,4,obrigatoria,#8b5cf6
+INF310,Programação Concorrente e Distribuída,4,60,4,obrigatoria,#14b8a6
+INF330,Teoria e Modelos de Grafos,4,60,4,obrigatoria,#6366f1
+INF332,Projeto e Análise de Algoritmos,4,60,4,obrigatoria,#6366f1
+INF221,Engenharia de Software I,4,60,5,obrigatoria,#84cc16
+INF331,Linguagens Formais e Autômatos,4,60,5,obrigatoria,#6366f1
+INF420,Inteligência Artificial I,4,60,5,obrigatoria,#a855f7
+INF450,Arquitetura de Computadores,4,60,5,obrigatoria,#8b5cf6
+INF452,Redes de Computadores,4,60,5,obrigatoria,#ec4899
+MAT271,Cálculo Numérico,4,60,5,obrigatoria,#f59e0b
+ERU324,Metodologia de Pesquisa,4,60,6,obrigatoria,#64748b
+INF321,Projeto e Desenvolvimento de Sistemas para a Web,4,60,6,obrigatoria,#84cc16
+INF340,Linguagens de Programação,4,60,6,obrigatoria,#3b82f6
+INF421,Sistemas de Informação,4,60,6,obrigatoria,#06b6d4
+INF441,Construção de Compiladores,4,60,6,obrigatoria,#6366f1
+INF451,Sistemas Operacionais,4,60,6,obrigatoria,#14b8a6
+INF497,Projeto Final de Curso,0,0,7,obrigatoria,#64748b
+INF498,Seminário I,2,30,7,obrigatoria,#64748b
+INF499,Seminário II,2,30,8,obrigatoria,#64748b
+INF115,Programação Funcional,4,60,,optativa,#f97316
+INF282,Pesquisa Operacional III,4,60,,optativa,#f97316
+INF311,Programação para Dispositivos Móveis,4,60,,optativa,#f97316
+INF323,Engenharia de Software II,4,60,,optativa,#f97316
+INF333,Programação Competitiva,4,60,,optativa,#f97316
+INF390,Computação Gráfica,4,60,,optativa,#f97316
+INF394,Processamento Digital de Imagens,4,60,,optativa,#f97316
+INF425,Ciência de Dados,4,60,,optativa,#f97316
+INF442,Padrões de Projeto,4,60,,optativa,#f97316
+INF491,Tóp. Esp.: Comp. Musical / IHC,4,60,,optativa,#f97316
+INF492,Tóp. Esp.: RNC / Visão Computac.,4,60,,optativa,#f97316
+INF493,Tóp. Esp.: Introdução à Cibersegurança,4,60,,optativa,#f97316
+INF494,Tóp. Esp.: Process. Alto Desemp. com GPUs,4,60,,optativa,#f97316

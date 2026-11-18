@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- A volta do link do e-mail traz o token no endereço (#access_token=...): não o repasse por Referer. -->
+<meta name="referrer" content="no-referrer">
+<title>Entrar — Planejador Acadêmico</title>
+<link rel="stylesheet" href="/static/css/telas_simples.css">
+</head>
+<body>
+<h1>📚 Entrar</h1>
+
+<main class="caixa">
+  <form id="form" novalidate>
+    <label for="email">E-mail</label>
+    <input id="email" type="email" autocomplete="email" inputmode="email" placeholder="nome@exemplo.com" required autofocus>
+    <button class="btn" id="enviar" type="submit">Receber link</button>
+  </form>
+
+  <form id="form-codigo" class="passo2" novalidate hidden>
+    <label for="codigo">Código do e-mail</label>
+    <input id="codigo" type="text" autocomplete="one-time-code" inputmode="numeric" maxlength="12" placeholder="000000">
+    <button class="btn sec" id="confirmar" type="submit">Entrar</button>
+  </form>
+
+  <div class="msg" id="msg" role="status" aria-live="polite"></div>
+</main>
+<p class="hint" style="margin-top:14px"><a href="/">← Início</a></p>
+
+<script>
+// Login pelo Supabase Auth (sem senha). O navegador fala com o Supabase; o nosso servidor só
+// troca o token dele por uma sessão (POST /api/auth/entrar). Sem biblioteca: são 2 chamadas REST.
+// Valores vindos do servidor (já validados/públicos): destino pós-login e dados do provedor.
+const PROXIMO = {{ proximo|tojson }};
+const LOGIN = {{ login|tojson }};
+const CHAVE_PROXIMO = 'planejador:proximo';   // o link abre em outra aba: localStorage, não sessionStorage
+const $ = id => document.getElementById(id);
+
+function mostrar(texto, tipo = '') { $('msg').textContent = texto; $('msg').className = 'msg ' + tipo; }
+function guardar(chave, valor) { try { valor == null ? localStorage.removeItem(chave) : localStorage.setItem(chave, valor); } catch (e) {} }
+function ler(chave) { try { return localStorage.getItem(chave); } catch (e) { return null; } }
+
+// ── servidor próprio: token do Supabase -> sessão ────────────────────────────────────────
+async function abrirSessao(token) {
+  mostrar('Entrando…');
+  try {
+    const destino = PROXIMO !== '/' ? PROXIMO : (ler(CHAVE_PROXIMO) || '/');   // o servidor valida de novo
+    const r = await fetch('/api/auth/entrar', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({access_token: token, proximo: destino})
+    });
+    const j = await r.json();
+    if (!r.ok) return mostrar(j.erro || 'Não foi possível entrar. Tente de novo.', 'erro');
+    guardar(CHAVE_PROXIMO, null);
+    location.replace(j.proximo || '/');
+  } catch (e) { mostrar('Sem conexão com o servidor. Verifique e tente de novo.', 'erro'); }
+}
+
+// ── Supabase Auth (REST) ─────────────────────────────────────────────────────────────────
+async function supabase(caminho, corpo, query = '') {
+  const r = await fetch(`${LOGIN.url}/auth/v1/${caminho}${query}`, {
+    method: 'POST', headers: {'Content-Type': 'application/json', apikey: LOGIN.chave},
+    body: JSON.stringify(corpo)
+  });
+  let j = {}; try { j = await r.json(); } catch (e) {}
+  return {ok: r.ok, status: r.status, dados: j};
+}
+
+async function pedirLink(email) {
+  // O link volta para esta página (cadastre-a em "Redirect URLs" no Supabase).
+  const volta = encodeURIComponent(location.origin + '/entrar');
+  const r = await supabase('otp', {email, create_user: true}, `?redirect_to=${volta}`);
+  if (r.status === 429) return mostrar('Muitos pedidos seguidos. Aguarde um minuto e tente de novo.', 'erro');
+  if (!r.ok) return mostrar('Não foi possível enviar o e-mail agora. Tente de novo.', 'erro');
+  mostrar('Enviado. Abra o link no e-mail ou digite o código abaixo.', 'ok');
+  $('form-codigo').hidden = false; $('codigo').focus();
+}
+
+async function confirmarCodigo(email, codigo) {
+  const r = await supabase('verify', {type: 'email', email, token: codigo});
+  if (!r.ok || !r.dados.access_token) return mostrar('Código inválido ou vencido.', 'erro');
+  await abrirSessao(r.dados.access_token);
+}
+
+// ── formulários ──────────────────────────────────────────────────────────────────────────
+$('form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const email = $('email').value.trim();
+  if (!email) return mostrar('Digite o seu e-mail.', 'erro');
+  guardar(CHAVE_PROXIMO, PROXIMO);
+  $('enviar').disabled = true;
+  try {
+    if (LOGIN.provedor === 'dev') await abrirSessao('dev:' + email);   // sem Supabase: só em desenvolvimento
+    else { mostrar('Enviando…'); await pedirLink(email); }
+  } catch (err) { mostrar('Sem conexão. Verifique e tente de novo.', 'erro'); }
+  finally { $('enviar').disabled = false; }
+});
+
+$('form-codigo').addEventListener('submit', async e => {
+  e.preventDefault();
+  const codigo = $('codigo').value.trim();
+  if (!codigo) return mostrar('Digite o código.', 'erro');
+  $('confirmar').disabled = true;
+  try { await confirmarCodigo($('email').value.trim(), codigo); }
+  catch (err) { mostrar('Sem conexão. Verifique e tente de novo.', 'erro'); }
+  finally { $('confirmar').disabled = false; }
+});
+
+// ── volta do link do e-mail: o Supabase devolve o token (ou o erro) no #fragmento ─────────────
+(function () {
+  const hash = new URLSearchParams(location.hash.slice(1));
+  if (!location.hash) return;
+  history.replaceState(null, '', location.pathname + location.search);   // tira o token da barra e do histórico
+  if (hash.get('access_token')) return abrirSessao(hash.get('access_token'));
+  if (hash.get('error')) mostrar('Este link venceu ou já foi usado. Peça outro.', 'erro');
+})();
+</script>
+</body>
+</html>

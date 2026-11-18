@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trazer seu curso — Planejador Acadêmico</title>
+<style>
+:root{--bg:#0f1117;--bg2:#161b27;--bg3:#1e2535;--border:#2d3650;--text:#e2e8f0;--text2:#94a3b8;--accent:#6366f1;--accent2:#818cf8;--green:#10b981;--red:#ef4444;--yellow:#f59e0b;--radius:10px}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);padding:24px;max-width:860px;margin:0 auto;line-height:1.5}
+h1{font-size:24px;margin-bottom:4px}
+h2{font-size:18px;margin-bottom:6px}
+h3{font-size:14px;margin-bottom:4px}
+p,.hint{color:var(--text2);font-size:14px}
+.hint{font-size:12px}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-top:14px}
+button,.btn{background:var(--accent);color:#fff;border:0;border-radius:7px;padding:10px 18px;font-size:14px;cursor:pointer;font-family:inherit;text-decoration:none;display:inline-block}
+button.sec,.btn.sec{background:var(--bg3);border:1px solid var(--border);color:var(--text)}
+button:disabled{opacity:.4;cursor:not-allowed}
+button:focus-visible,.btn:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:2px solid var(--accent2);outline-offset:2px}
+input[type=file],select{background:var(--bg3);border:1px solid var(--border);border-radius:7px;color:var(--text);padding:9px;font-size:14px;max-width:100%}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px}
+.row.fim{justify-content:space-between}
+
+/* Indicador de progresso */
+.stepper{display:flex;gap:6px;list-style:none;margin:18px 0 4px;counter-reset:passo}
+.stepper li{flex:1;font-size:12px;color:var(--text2);border-top:3px solid var(--border);padding-top:6px;counter-increment:passo}
+.stepper li::before{content:counter(passo) ". "}
+.stepper li.feito{border-color:var(--green);color:var(--text)}
+.stepper li.atual{border-color:var(--accent2);color:var(--text);font-weight:600}
+@media (max-width:560px){.stepper li{font-size:0}.stepper li::before{font-size:12px}.stepper li.atual::after{content:" " attr(data-nome);font-size:12px}}
+
+.passo{display:none}.passo.ativo{display:block}
+
+/* Fontes */
+.fontes{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin-top:12px}
+.fonte{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:14px}
+.fonte b{display:block;margin-bottom:4px}
+.fonte .gera{margin-top:8px;font-size:12px;color:var(--accent2)}
+.dica{border-left:3px solid var(--accent);background:var(--bg3);padding:10px 12px;border-radius:0 8px 8px 0;margin-top:14px}
+.dica p{color:var(--text)}
+
+/* Passo 2 */
+.abas{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.abas button{background:var(--bg3);border:1px solid var(--border);color:var(--text2)}
+.abas button[aria-pressed=true]{border-color:var(--accent2);color:var(--text)}
+textarea{width:100%;height:170px;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:8px;font-size:12px;margin-top:10px}
+details{margin-top:12px}summary{cursor:pointer;font-size:14px}
+
+/* Prévia */
+.resumo{font-size:16px;color:var(--text);margin-top:8px}
+.totais{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-top:12px}
+.tot{background:var(--bg3);border-radius:8px;padding:10px;text-align:center}.tot b{display:block;font-size:22px}
+.novo{color:var(--green)}.atualizar{color:var(--yellow)}.erro{color:var(--red)}.aviso{color:var(--yellow)}.inalterado{color:var(--text2)}
+.problema{background:var(--bg3);border-left:3px solid var(--yellow);border-radius:0 8px 8px 0;padding:8px 12px;margin-top:8px;font-size:13px}
+.problema.erro{border-color:var(--red);color:var(--text)}
+.problema .onde{font-size:12px;color:var(--text2)}
+.problema .como{color:var(--accent2);margin-top:2px}
+table{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--border);vertical-align:top}
+.vazio{text-align:center;padding:18px;color:var(--text2)}
+
+/* Sucesso */
+.sucesso{text-align:center}
+.sucesso .marca{font-size:44px;color:var(--green)}
+.proximos{text-align:left;margin-top:14px}
+.proximos li{margin:6px 0 6px 20px;font-size:14px;color:var(--text2)}
+#msg{margin-top:12px;font-size:14px}
+</style>
+</head>
+<body>
+<p class="hint"><a href="/" style="color:var(--accent2)">← Início</a></p>
+<h1>Traga o seu curso para o planejador</h1>
+<p>Em poucos passos você leva a matriz do curso (e, se quiser, a oferta de horários) para cá. Nada é salvo até você confirmar.</p>
+
+<ol class="stepper" id="stepper" aria-label="Progresso">
+  <li data-nome="De onde vêm os dados">De onde vêm os dados</li>
+  <li data-nome="Prepare os arquivos">Prepare os arquivos</li>
+  <li data-nome="Envie">Envie</li>
+  <li data-nome="Confira e confirme">Confira e confirme</li>
+  <li data-nome="Pronto">Pronto</li>
+</ol>
+
+<!-- Passo 1 -->
+<section class="passo ativo" id="passo-1" aria-labelledby="t1">
+  <div class="card">
+    <h2 id="t1">De onde vêm os dados do seu curso?</h2>
+    <p>Você não precisa ter tudo de uma vez. Cada fonte traz uma parte, e dá para juntar as partes aos poucos.</p>
+    <div class="fontes">
+      <div class="fonte"><b>📘 Matriz curricular (PPC)</b>
+        <p>O documento do curso: disciplinas, créditos, carga horária, período sugerido e pré-requisitos.</p>
+        <div class="gera">Gera: disciplinas e requisitos</div></div>
+      <div class="fonte"><b>🗓️ Quadro de horários</b>
+        <p>A oferta de um período: turmas, professores, vagas, dias, horários e salas.</p>
+        <div class="gera">Gera: turmas</div></div>
+      <div class="fonte"><b>🌐 Sites da instituição</b>
+        <p>Páginas do curso ou do departamento e o catálogo de disciplinas. Trazem um pouco de tudo, de forma desigual.</p>
+        <div class="gera">Gera: o que for encontrado</div></div>
+    </div>
+    <div class="dica"><p><b>Ordem que funciona melhor:</b> comece pela matriz. Depois traga o quadro de horários de cada período, um de cada vez — as turmas se encaixam nas disciplinas que você já importou, e nada do que já está salvo é apagado.</p></div>
+    <p class="hint" style="margin-top:10px">O que você já cursou não entra aqui: isso você informará depois, dentro do planejador.</p>
+    <div class="row fim"><span></span><button data-ir="2">Começar</button></div>
+  </div>
+</section>
+
+<!-- Passo 2 -->
+<section class="passo" id="passo-2" aria-labelledby="t2">
+  <div class="card">
+    <h2 id="t2">Prepare os arquivos</h2>
+    <p>Escolha a fonte que você tem em mãos. Copie o texto abaixo, cole numa IA (como o Claude) junto com o documento ou os links, e salve cada resposta como um arquivo .csv.</p>
+    <div class="abas" id="abas" role="group" aria-label="Fonte dos dados"></div>
+    <textarea id="prompt" readonly aria-label="Texto para a IA"></textarea>
+    <div class="row"><button class="sec" id="copiar">Copiar texto</button><span id="copiado" class="hint" role="status"></span></div>
+    <p class="hint" style="margin-top:10px">A IA foi instruída a nunca inventar: o que não estiver no documento fica em branco. Mesmo assim, você confere tudo no passo 4.</p>
+    <details><summary>Prefere preencher na mão? Baixe os modelos</summary>
+      <p style="margin-top:6px">Cada modelo já vem com os títulos das colunas e uma linha de exemplo.</p>
+      <div class="row" id="modelos"></div>
+    </details>
+    <div class="row fim"><button class="sec" data-ir="1">Voltar</button><button data-ir="3">Já tenho os arquivos</button></div>
+  </div>
+</section>
+
+<!-- Passo 3 -->
+<section class="passo" id="passo-3" aria-labelledby="t3">
+  <div class="card">
+    <h2 id="t3">Envie e confira a prévia</h2>
+    <p>Escolha os arquivos .csv (pode ser mais de um). Os nomes aceitos são <b>curso.csv</b>, <b>disciplinas.csv</b>, <b>requisitos.csv</b> e <b>turmas.csv</b>.</p>
+    <div class="row">
+      <input type="file" id="arquivos" multiple accept=".csv,text/csv" aria-label="Arquivos CSV">
+    </div>
+    <div class="row">
+      <label for="visibilidade" class="hint">Quem poderá ver este curso?</label>
+      <select id="visibilidade"><option value="privado">Só eu (privado)</option><option value="publico">Qualquer pessoa (público)</option></select>
+    </div>
+    <p class="hint">Só vale para um curso novo.</p>
+    <div id="msg" role="status"></div>
+    <div class="row fim"><button class="sec" data-ir="2">Voltar</button><button id="validar">Conferir arquivos</button></div>
+  </div>
+</section>
+
+<!-- Passo 4 -->
+<section class="passo" id="passo-4" aria-labelledby="t4">
+  <div class="card">
+    <h2 id="t4">Confira antes de confirmar</h2>
+    <p class="resumo" id="resumo"></p>
+    <div class="totais" id="totais"></div>
+    <p class="hint" id="aviso-bloqueio" style="margin-top:10px"></p>
+    <div class="row fim"><button class="sec" id="voltar-envio">Escolher outros arquivos</button><button id="confirmar" disabled>Confirmar e salvar</button></div>
+  </div>
+  <div class="card"><h3>O que precisa da sua atenção</h3><div id="issues"></div></div>
+  <details class="card"><summary>Ver linha por linha</summary><div id="arquivos-previa"></div></details>
+</section>
+
+<!-- Passo 5 -->
+<section class="passo" id="passo-5" aria-labelledby="t5">
+  <div class="card sucesso">
+    <div class="marca" aria-hidden="true">✓</div>
+    <h2 id="t5">Pronto! Seu curso está salvo.</h2>
+    <p id="sucesso-resumo"></p>
+    <div class="proximos">
+      <h3>O que você já pode fazer agora</h3>
+      <ul id="proximos">
+        <li>Importar o quadro de horários de outro período para ter as turmas do semestre.</li>
+        <li>Corrigir algo na planilha e enviar de novo: só o que mudou será atualizado.</li>
+      </ul>
+      <p class="hint" style="margin-top:8px">Abra o planejador para ver o fluxograma e a base de disciplinas do curso.</p>
+    </div>
+    <div class="row" style="justify-content:center"><a id="abrir" class="btn" href="/">Abrir o planejador</a><button id="mais" class="sec">Trazer mais dados</button></div>
+  </div>
+</section>
+
+<script>
+const $ = id => document.getElementById(id);
+const el = (tag, cls, texto) => { const e = document.createElement(tag); if (cls) e.className = cls; if (texto !== undefined) e.textContent = texto; return e; };
+
+// ── Navegação por passos (só apresentação; nenhuma regra de negócio aqui) ──
+function ir(n) {
+  document.querySelectorAll('.passo').forEach(s => s.classList.toggle('ativo', s.id === 'passo-' + n));
+  document.querySelectorAll('#stepper li').forEach((li, i) => {
+    li.classList.toggle('atual', i + 1 === n);
+    li.classList.toggle('feito', i + 1 < n);
+    if (i + 1 === n) li.setAttribute('aria-current', 'step'); else li.removeAttribute('aria-current');
+  });
+  window.scrollTo({ top: 0 });
+}
+document.querySelectorAll('[data-ir]').forEach(b => b.onclick = () => ir(Number(b.dataset.ir)));
+
+function mensagem(texto, cls) { const m = $('msg'); m.textContent = texto; m.className = cls || ''; }
+function formData() {
+  const fd = new FormData();
+  for (const f of $('arquivos').files) fd.append(f.name, f, f.name);
+  fd.append('visibilidade', $('visibilidade').value);
+  return fd;
+}
+// A API devolve JSON, mas um erro de servidor pode devolver HTML: não deixar a tela muda.
+async function lerJson(r) { try { return await r.json(); } catch { return {}; } }
+
+// ── Passo 2: texto para a IA por fonte + modelos ──
+const FONTES = [['matriz', 'Matriz curricular (PPC)'], ['horarios', 'Quadro de horários'], ['web', 'Sites da instituição']];
+async function mostrarPrompt(fonte) {
+  document.querySelectorAll('#abas button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.fonte === fonte)));
+  $('copiado').textContent = '';
+  try {
+    const r = await fetch('/api/importacao/prompt-ia?fonte=' + fonte);
+    $('prompt').value = (await r.json()).prompt || '';
+  } catch { $('prompt').value = 'Não foi possível carregar o texto agora. Recarregue a página.'; }
+}
+async function carregarApoio() {
+  for (const [chave, nome] of FONTES) {
+    const b = el('button', '', nome); b.dataset.fonte = chave; b.onclick = () => mostrarPrompt(chave); $('abas').append(b);
+  }
+  mostrarPrompt('matriz');
+  try {
+    const m = await (await fetch('/api/importacao/modelos')).json();
+    for (const nome of m.modelos) {
+      const a = el('a', 'btn sec', 'Modelo ' + nome); a.href = '/api/importacao/modelos/' + nome; $('modelos').append(a);
+    }
+  } catch { /* os modelos são opcionais */ }
+}
+$('copiar').onclick = async () => {
+  try { await navigator.clipboard.writeText($('prompt').value); $('copiado').textContent = 'Copiado!'; }
+  catch { $('prompt').select(); $('copiado').textContent = 'Selecione e copie o texto (Ctrl+C).'; }
+};
+
+// ── Passo 4: prévia em linguagem comum ──
+const ROTULO = { 'curso.csv': ['curso', 'cursos'], 'disciplinas.csv': ['disciplina', 'disciplinas'],
+                 'requisitos.csv': ['requisito', 'requisitos'], 'turmas.csv': ['turma', 'turmas'] };
+const plural = (n, [s, p]) => `${n} ${n === 1 ? s : p}`;
+const LISTA = e => e.length <= 1 ? e.join('') : e.slice(0, -1).join(', ') + ' e ' + e[e.length - 1];
+
+function resumoEmTexto(p) {
+  const criar = [], atualizar = [];
+  for (const a of p.arquivos) {
+    const r = ROTULO[a.arquivo]; if (!r) continue;
+    if (a.novos) criar.push(plural(a.novos, r));
+    if (a.a_atualizar) atualizar.push(plural(a.a_atualizar, r));
+  }
+  if (!criar.length && !atualizar.length) return 'Não há nada novo para salvar: tudo o que você enviou já está igual ao que existe.';
+  const partes = [];
+  if (criar.length) partes.push('criar ' + LISTA(criar));
+  if (atualizar.length) partes.push('atualizar ' + LISTA(atualizar));
+  return 'Ao confirmar, vamos ' + partes.join(' e ') + '.';
+}
+// Sugere o que fazer, a partir do texto do problema (o texto em si já vem em português do servidor).
+function comoResolver(i) {
+  const m = i.mensagem.toLowerCase();
+  if (m.includes('não existe') || m.includes('inexistente') || m.includes('não foi encontrad'))
+    return 'Confira o código no arquivo disciplinas.csv: ele precisa estar lá (ou já ter sido importado antes).';
+  if (m.includes('em branco') || m.includes('obrigatório')) return 'Preencha esta célula e envie o arquivo de novo.';
+  if (m.includes('aparece de novo')) return 'Deixe apenas uma dessas linhas.';
+  if (m.includes('circular') || m.includes('ciclo')) return 'Revise os pré-requisitos: uma disciplina não pode exigir outra que, direta ou indiretamente, exige a primeira.';
+  if (m.includes('sobrep')) return 'Ajuste os horários: dois encontros da mesma turma não podem ocupar o mesmo horário.';
+  if (m.includes('sem horários')) return 'Tudo bem se o horário ainda não saiu; a turma só não aparece no calendário.';
+  if (m.includes('histórico')) return 'Retire este arquivo: o histórico será informado dentro do planejador.';
+  return i.severidade === 'erro' ? 'Corrija e envie o arquivo de novo.' : 'Pode seguir, mas vale conferir.';
+}
+// Problemas com a mesma mensagem (ex.: 13 turmas sem horário) viram um cartão só, com a lista de linhas.
+function agrupar(issues) {
+  const grupos = new Map();
+  for (const i of issues) {
+    const k = [i.severidade, i.arquivo, i.coluna, i.mensagem].join('\u0000');
+    if (!grupos.has(k)) grupos.set(k, { ...i, linhas: [] });
+    if (i.linha) grupos.get(k).linhas.push(i.linha);
+  }
+  return [...grupos.values()];
+}
+function problema(i) {
+  const d = el('div', 'problema ' + i.severidade);
+  const linhas = i.linhas.length ? (i.linhas.length === 1 ? 'linha ' : 'linhas ') + i.linhas.join(', ') : null;
+  const onde = [i.arquivo, linhas, i.coluna ? 'coluna ' + i.coluna : null].filter(Boolean).join(' · ');
+  d.append(el('div', 'onde', (i.severidade === 'erro' ? 'Precisa corrigir — ' : 'Atenção — ') + onde),
+           el('div', '', i.mensagem), el('div', 'como', comoResolver(i)));
+  return d;
+}
+function mostrarPrevia(p) {
+  const t = p.totais;
+  $('resumo').textContent = t.erros ? `Encontramos ${t.erros} problema(s) que impedem de salvar.` : resumoEmTexto(p);
+  $('totais').replaceChildren(...[['novos', 'novo', 'para criar'], ['a_atualizar', 'atualizar', 'para atualizar'], ['inalterados', 'inalterado', 'já iguais'],
+                                  ['erros', 'erro', 'a corrigir'], ['avisos', 'aviso', 'para conferir']]
+    .map(([k, c, nome]) => { const d = el('div', 'tot'); d.append(el('b', c, t[k]), el('span', 'hint', nome)); return d; }));
+  $('confirmar').disabled = !p.pode_confirmar;
+  $('aviso-bloqueio').textContent = p.pode_confirmar ? '' :
+    (t.erros ? 'Corrija os arquivos e envie de novo. Salvamos tudo ou nada, para nunca deixar o curso pela metade.' : 'Nada a salvar.');
+
+  const issues = $('issues'); issues.replaceChildren();
+  if (!p.issues.length) issues.append(el('p', 'vazio', '✓ Nenhum problema. Está tudo certo para confirmar.'));
+  else agrupar(p.issues).forEach(i => issues.append(problema(i)));
+
+  const box = $('arquivos-previa'); box.replaceChildren();
+  const acaoTxt = { novo: 'novo', atualizar: 'atualizar', inalterado: 'igual' };
+  for (const a of p.arquivos) {
+    box.append(el('h3', '', `${a.arquivo} — ${a.linhas_lidas} linhas lidas, ${a.descartadas} descartadas` +
+      (a.mantidos_no_banco ? `, ${a.mantidos_no_banco} já existentes mantidas` : '')));
+    const tb = el('table');
+    for (const i of a.itens) {
+      const tr = el('tr'); tr.append(el('td', '', i.linha), el('td', '', i.chave), el('td', i.acao, acaoTxt[i.acao] || i.acao),
+        el('td', 'hint', i.mudancas.map(m => `${m.campo}: ${m.antes ?? '(vazio)'} → ${m.depois}`).join('; ')));
+      tb.append(tr);
+    }
+    box.append(tb);
+  }
+  ir(4);
+}
+
+// Sessão vencida (401): volta ao login e depois a esta tela. Os arquivos escolhidos se perdem; avisamos antes.
+function sessaoExpirou(r) {
+  if (r.status !== 401) return false;
+  alert('Sua sessão terminou. Vamos pedir um novo link de acesso; depois escolha os arquivos de novo.');
+  location.href = '/entrar?proximo=/importar';
+  return true;
+}
+
+$('validar').onclick = async () => {
+  if (!$('arquivos').files.length) return mensagem('Escolha ao menos um arquivo .csv para continuar.', 'erro');
+  mensagem('Conferindo os arquivos…'); $('validar').disabled = true;
+  try {
+    const r = await fetch('/api/importacao/validar', { method: 'POST', body: formData() });
+    if (sessaoExpirou(r)) return;
+    const j = await lerJson(r);
+    if (!r.ok) return mensagem(j.erro || 'Não foi possível conferir os arquivos. Tente de novo.', 'erro');
+    mensagem(''); mostrarPrevia(j.previa);
+  } catch { mensagem('Sem conexão com o servidor. Verifique e tente de novo.', 'erro'); }
+  finally { $('validar').disabled = false; }
+};
+$('voltar-envio').onclick = () => ir(3);
+
+$('confirmar').onclick = async () => {
+  $('confirmar').disabled = true; $('aviso-bloqueio').textContent = 'Salvando…';
+  try {
+    const r = await fetch('/api/importacao/confirmar', { method: 'POST', body: formData() });
+    if (sessaoExpirou(r)) return;
+    const j = await lerJson(r);
+    if (!r.ok) {
+      $('aviso-bloqueio').textContent = j.erro || 'Não foi possível salvar. Nada foi gravado.';
+      if (j.detalhes) mostrarPrevia(j.detalhes);
+      return;
+    }
+    const lista = campo => LISTA(Object.entries(j.relatorio.por_arquivo)
+      .filter(([a, c]) => ROTULO[a] && c[campo]).map(([a, c]) => plural(c[campo], ROTULO[a])));
+    const novos = lista('criados'), mudados = lista('atualizados');
+    $('sucesso-resumo').textContent = (j.relatorio.curso_criado ? 'Curso criado. ' : 'Curso atualizado. ') +
+      (novos ? 'Novos: ' + novos + '. ' : '') + (mudados ? 'Atualizados: ' + mudados + '.' : '');
+    $('abrir').href = '/curso/' + j.relatorio.curso_id;
+    ir(5);
+  } catch { $('aviso-bloqueio').textContent = 'Sem conexão com o servidor. Nada foi gravado; tente de novo.'; $('confirmar').disabled = false; }
+};
+$('mais').onclick = () => { $('arquivos').value = ''; mensagem(''); ir(1); };
+
+ir(1);
+carregarApoio();
+</script>
+</body>
+</html>

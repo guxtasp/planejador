@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- O token está na URL: não o repasse a outros sites por Referer. -->
+<meta name="referrer" content="no-referrer">
+<title>Confirmar entrada — Planejador Acadêmico</title>
+<link rel="stylesheet" href="/static/css/telas_simples.css">
+</head>
+<body>
+<h1>📚 Confirmar entrada</h1>
+<p>Clique no botão para entrar. Este passo extra evita que programas que "abrem" links de e-mail gastem o seu link.</p>
+
+<main class="caixa">
+  <button class="btn" id="entrar" type="button" style="margin-top:0">Entrar no Planejador</button>
+  <div class="msg" id="msg" role="status" aria-live="polite"></div>
+  <p class="hint" id="novo" hidden style="margin-top:12px"><a href="/entrar">Pedir um novo link</a></p>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const TOKEN = new URLSearchParams(location.search).get('token') || '';
+history.replaceState(null, '', location.pathname);   // tira o token da barra de endereços e do histórico
+
+function mostrar(texto, tipo = '') { $('msg').textContent = texto; $('msg').className = 'msg ' + tipo; }
+
+if (!TOKEN) { mostrar('Link incompleto. Peça um novo link de acesso.', 'erro'); $('novo').hidden = false; $('entrar').disabled = true; }
+
+$('entrar').addEventListener('click', async () => {
+  $('entrar').disabled = true; mostrar('Entrando…');
+  try {
+    const r = await fetch('/api/auth/entrar', {
+      method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({token: TOKEN})
+    });
+    const j = await r.json();
+    if (!r.ok) { mostrar(j.erro || 'Não foi possível entrar.', 'erro'); $('novo').hidden = false; return; }
+    mostrar('Pronto! Abrindo o planejador…', 'ok');
+    location.replace(j.proximo || '/');
+  } catch { mostrar('Sem conexão com o servidor. Tente de novo.', 'erro'); $('entrar').disabled = false; }
+});
+</script>
+</body>
+</html>

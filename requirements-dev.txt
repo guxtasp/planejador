@@ -1,0 +1,4 @@
+-r requirements.txt
+pytest>=8.0
+# Necessário apenas para importar o app legado nos testes de caracterização.
+flask-cors>=4.0

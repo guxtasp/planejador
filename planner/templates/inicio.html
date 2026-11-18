@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Planejador Acadêmico</title>
+<style>
+:root{--bg:#0f1117;--bg2:#161b27;--bg3:#1e2535;--border:#2d3650;--text:#e2e8f0;--text2:#94a3b8;--accent:#6366f1;--accent2:#818cf8;--green:#10b981;--red:#ef4444;--yellow:#f59e0b;--radius:10px}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);padding:24px;max-width:860px;margin:0 auto;line-height:1.5}
+h1{font-size:26px;margin-bottom:4px}
+p,.hint{color:var(--text2);font-size:14px}
+.hint{font-size:12px}
+.topo{margin:24px 0 8px}
+.btn{display:inline-block;background:var(--accent);color:#fff;border:0;border-radius:7px;padding:10px 18px;font-size:14px;cursor:pointer;font-family:inherit;text-decoration:none}
+.btn:hover{background:var(--accent2)}
+.btn.sec{background:var(--bg3);border:1px solid var(--border);color:var(--text)}
+.btn:focus-visible,a:focus-visible{outline:2px solid var(--accent2);outline-offset:2px}
+.cursos{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-top:18px}
+.curso{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;display:flex;flex-direction:column;gap:6px}
+.curso h2{font-size:16px}
+.curso .meta{font-size:12px;color:var(--text2)}
+.curso .num{font-size:12px;color:var(--text)}
+.curso .btn{margin-top:auto;text-align:center}
+.vazio{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:28px 22px;margin-top:22px}
+.vazio h2{font-size:18px;margin-bottom:8px}
+.vazio ol{margin:14px 0 18px 20px;color:var(--text2);font-size:14px}
+.vazio li{margin-bottom:6px}
+.vazio li b{color:var(--text)}
+.rodape{margin-top:26px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.conta{display:flex;gap:10px;align-items:center;justify-content:flex-end;font-size:13px;color:var(--text2);min-height:34px}
+.conta .btn{padding:6px 12px;font-size:12px}
+.erro{border-left:3px solid var(--red);background:var(--bg3);padding:10px 12px;border-radius:0 8px 8px 0;margin-top:18px;font-size:14px}
+</style>
+</head>
+<body>
+<div class="conta" id="conta"></div>
+<header class="topo">
+  <h1>📚 Planejador Acadêmico</h1>
+  <p>Planeje seus semestres com base na matriz curricular do seu curso.</p>
+</header>
+
+<main id="conteudo" aria-live="polite"><p class="hint" style="margin-top:22px">Carregando seus cursos…</p></main>
+
+<script>
+// Rede de segurança: se o link do e-mail cair aqui (URL de retorno não cadastrada no Supabase),
+// repassa o token à tela de entrada, que sabe usá-lo.
+if (location.hash.includes('access_token=') || location.hash.includes('error=')) location.replace('/entrar' + location.hash);
+
+// Onboarding: sem curso -> guia até a importação; com cursos -> escolher um ou trazer outro.
+// Textos de curso vêm de CSV: tudo entra por textContent (nunca innerHTML).
+function el(tag, props = {}, ...filhos) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(props)) {
+    if (k === 'class') e.className = v; else if (k === 'text') e.textContent = v; else e.setAttribute(k, v);
+  }
+  filhos.forEach(f => e.append(f));
+  return e;
+}
+const plural = (n, um, varios) => `${n} ${n === 1 ? um : varios}`;
+
+function telaVazia(logado) {
+  return el('section', {class: 'vazio'},
+    el('h2', {text: logado ? 'Vamos trazer o seu curso' : 'Entre para trazer o seu curso'}),
+    el('p', {text: logado ? 'Você ainda não tem nenhum curso. Só precisa fazer isso uma vez:'
+                          : 'Não há cursos públicos para mostrar. Entre (sem senha) e traga o seu em 3 passos:'}),
+    el('ol', {},
+      el('li', {}, el('b', {text: 'Escolha de onde vêm os dados '}), 'a matriz curricular (PPC) do curso e, se quiser, o quadro de horários.'),
+      el('li', {}, el('b', {text: 'Prepare as planilhas '}), 'com um modelo pronto ou deixando uma IA converter o seu PDF.'),
+      el('li', {}, el('b', {text: 'Envie e confira '}), 'a prévia antes de confirmar. Nada é gravado até você aprovar.')),
+    logado ? el('a', {class: 'btn', href: '/importar', text: 'Trazer meu curso'})
+           : el('a', {class: 'btn', href: '/entrar?proximo=/importar', text: 'Entrar e trazer meu curso'}),
+    el('p', {class: 'hint', style: 'margin-top:12px', text: 'Leva poucos minutos. Informação que não consta no documento fica em branco, sem inventar nada.'}));
+}
+
+function cartaoCurso(c) {
+  const meta = [c.instituicao, c.versao_matriz && `Matriz ${c.versao_matriz}`].filter(Boolean).join(' · ');
+  return el('article', {class: 'curso'},
+    el('h2', {text: c.nome}),
+    meta ? el('div', {class: 'meta', text: meta}) : '',
+    el('div', {class: 'num', text: `${plural(c.total_disciplinas, 'disciplina', 'disciplinas')} · ${plural(c.total_turmas, 'turma', 'turmas')}`}),
+    el('a', {class: 'btn', href: `/curso/${c.id}`, text: 'Abrir planejador'}));
+}
+
+function telaCursos(cursos, logado) {
+  return el('section', {},
+    el('h2', {text: cursos.length === 1 ? 'Curso disponível' : 'Escolha um curso', style: 'font-size:18px;margin-top:22px'}),
+    el('div', {class: 'cursos'}, ...cursos.map(cartaoCurso)),
+    el('div', {class: 'rodape'}, ...(logado ? [
+      el('a', {class: 'btn sec', href: '/importar', text: '+ Trazer outro curso ou atualizar dados'}),
+      el('span', {class: 'hint', text: 'Para atualizar um curso seu, envie os arquivos com o mesmo nome de curso.'})]
+    : [el('a', {class: 'btn sec', href: '/entrar?proximo=/importar', text: 'Entrar para trazer o meu curso'})])));
+}
+
+// Barra da conta (canto superior): e-mail + Sair, ou o convite para entrar.
+// O e-mail vem do servidor, mas entra por textContent como todo o resto.
+function barraDaConta(usuario) {
+  if (!usuario) return el('a', {class: 'btn sec', href: '/entrar', text: 'Entrar'});
+  const sair = el('button', {class: 'btn sec', type: 'button', text: 'Sair'});
+  sair.addEventListener('click', async () => {
+    sair.disabled = true;
+    try { await fetch('/api/auth/sair', {method: 'POST'}); } finally { location.reload(); }
+  });
+  return el('span', {}, el('span', {text: usuario.email + ' '}), sair);
+}
+
+(async () => {
+  const raiz = document.getElementById('conteudo');
+  try {
+    const [rc, re] = await Promise.all([fetch('/api/cursos'), fetch('/api/auth/eu')]);
+    const j = await rc.json(), eu = await re.json();
+    if (!j.ok || !eu.ok) throw new Error(j.erro || eu.erro || 'Resposta inesperada do servidor.');
+    const logado = Boolean(eu.usuario);
+    document.getElementById('conta').replaceChildren(barraDaConta(eu.usuario));
+    raiz.replaceChildren(j.cursos.length ? telaCursos(j.cursos, logado) : telaVazia(logado));
+  } catch (e) {
+    raiz.replaceChildren(el('div', {class: 'erro'},
+      el('b', {text: 'Não foi possível carregar os cursos. '}), `Tente recarregar a página. (${e.message})`));
+  }
+})();
+</script>
+</body>
+</html>
