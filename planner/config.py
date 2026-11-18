@@ -57,7 +57,10 @@ class DevelopmentConfig(BaseConfig):
 
     DEBUG = True
     _local_db = BASE_DIR / "instance" / "planner.db"
-    _local_db.parent.mkdir(exist_ok=True)
+    try:
+        _local_db.parent.mkdir(exist_ok=True)
+    except OSError:
+        pass   # disco somente leitura (ex.: Vercel): esta classe nem é usada em produção
     SQLALCHEMY_DATABASE_URI = normalize_database_url(
         os.environ.get("DATABASE_URL", f"sqlite:///{_local_db}")
     )
