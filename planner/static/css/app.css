@@ -335,3 +335,34 @@ table thead th{position:sticky;top:0;background:var(--bg2);z-index:1}
 .fluxo-period-label .estacao{position:absolute;top:2px;left:50%;width:20px;height:20px;margin-left:-10px;border-radius:50%;background:var(--bg);border:4px solid var(--text3);z-index:1}
 .fluxo-col.feito .estacao{background:var(--green);border-color:var(--green)}
 .fluxo-col.atual .estacao{background:var(--yellow);border-color:var(--bg);box-shadow:0 0 0 2px var(--text3)}
+
+
+/* ── A rota: menu em ordem de uso, com número, subtítulo e ✓ ─────────────── */
+.nav-item{position:relative}
+.nav-txt{display:flex;flex-direction:column;min-width:0;flex:1;line-height:1.25}
+.nav-txt b{font-weight:600;font-size:13px}
+.nav-txt small{font-size:11px;color:var(--text3);font-weight:400}
+.nav-item.active .nav-txt small{color:color-mix(in srgb,var(--accent) 70%,var(--text3))}
+.nav-passo{font-style:normal;flex-shrink:0;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:700;color:var(--text3);border:1.5px solid var(--border);background:var(--bg2)}
+.nav-item.active .nav-passo{border-color:var(--accent);color:var(--accent)}
+.nav-item.feito .nav-passo{background:var(--green);border-color:var(--green);color:var(--on-accent);font-size:0}
+.nav-item.feito .nav-passo::after{content:"✓";font-size:11px}
+.nav-item.pulado{opacity:.7}
+.nav-item.pulado .nav-passo{border-style:dashed}
+
+/* Barra do próximo passo (rodapé da área principal) */
+#proximo-passo{display:flex;align-items:center;gap:6px 14px;flex-wrap:wrap;padding:10px 24px;font-size:13px;
+  background:color-mix(in srgb,var(--accent) 8%,var(--bg2));border-top:1px solid var(--border)}
+#proximo-passo[hidden]{display:none}
+#proximo-passo .pp-rot{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--accent)}
+#proximo-passo .pp-txt{color:var(--text2);flex:1;min-width:220px}
+#proximo-passo .btn{margin-left:auto}
+@media(max-width:900px){.nav-passo{position:absolute;top:4px;right:6px;width:14px;height:14px;font-size:9px}.nav-item.feito .nav-passo::after{font-size:9px}}
+@media(max-width:640px){
+  .nav-txt small{display:none}
+  .nav-txt{align-items:center;flex:none}
+  .nav-passo{top:3px;right:8px}
+  #proximo-passo{padding:8px 16px}
+  #proximo-passo .pp-txt{display:none}
+}

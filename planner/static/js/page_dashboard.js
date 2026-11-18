@@ -13,18 +13,14 @@ function textoPrevisao(prev, concluido) {
 
 // Guia da primeira vez: some sozinho quando tudo estiver feito. Cada passo leva à tela certa.
 function primeirosPassos() {
-  const temPlano = S.planos.some(p => p.semestres.some(s => s.itens.length));
   const passos = [
     {feito: true, titulo: 'Curso trazido', texto: 'A matriz do seu curso já está aqui.'},
-    {feito: S.historico.length > 0, titulo: 'Informe o que você já cursou',
-     texto: 'Sem o histórico, nenhuma disciplina aparece como concluída e o progresso fica em zero.', tela: 'historico', botao: 'Informar histórico'},
-    {feito: temPlano, titulo: 'Monte o plano dos próximos semestres',
-     texto: 'Arraste as disciplinas que pretende cursar. O Rumo avisa de pré-requisito faltando e choque de horário.', tela: 'planner', botao: 'Montar plano'},
+    ...passosDaRota().map(p => ({feito: p.feito(), titulo: p.titulo, texto: p.texto, tela: p.tela, botao: p.botao})),
   ];
   if (passos.every(p => p.feito)) return '';
   const proximo = passos.find(p => !p.feito);
   return `<div class="card primeiros" style="margin-bottom:20px">
-    <div style="font-size:14px;font-weight:700;margin-bottom:10px">Primeiros passos</div>
+    <div style="font-size:14px;font-weight:700;margin-bottom:10px">Sua rota</div>
     <ol class="passos-lista">${passos.map(p => `<li class="${p.feito ? 'feito' : p === proximo ? 'atual' : ''}">
       <div><b>${esc(p.titulo)}</b><div class="pl-txt">${esc(p.texto)}</div></div>
       ${p === proximo ? `<button class="btn btn-primary btn-sm" onclick="irPara('${p.tela}')">${esc(p.botao)}</button>` : ''}

@@ -9,7 +9,7 @@ const S = {
   situacoes: new Map(),// disciplina_id → {situacao, reprovada_antes, pendencias} (derivado de `painel`)
   planos: [],
   currentPlano: null,
-  currentPage: 'fluxograma',
+  currentPage: 'dashboard',
   calendarSemId: null,
   // Oferta e análise (Etapa 4B)
   turmas: [],          // turmas do curso, com encontros
@@ -155,6 +155,7 @@ async function carregarAluno() {
   S.painel = p.ok ? p : null;
   S.situacoes = new Map((S.painel?.disciplinas || []).map(d => [d.id, d]));
   atualizarCaminho();
+  atualizarRota();
 }
 
 // Trecho de linha na barra lateral: quanto do curso já foi percorrido.
@@ -184,24 +185,67 @@ function turmasDaDisciplina(discId, periodo) {
   return S.turmas.filter(t => t.disciplina_id === discId && (periodo == null || t.periodo_letivo === periodo));
 }
 
+
+// ═══════════════════════════════════════════════════════
+// A ROTA: os 4 passos, na ordem em que se usa o Rumo.
+// Fonte única: o menu (✓ nos passos feitos), a barra "Próximo passo" e o cartão do Painel leem daqui.
+// `pular` = passo que não se aplica agora (ex.: sem quadro de horários importado, o Calendário não tem o que mostrar).
+// ═══════════════════════════════════════════════════════
+const planoComItens = () => S.planos.some(p => p.semestres.some(s => s.itens.length));
+const ROTA = [
+  {tela: 'historico', titulo: 'Informe o que você já cursou', botao: 'Abrir histórico',
+   texto: 'Sem o histórico, nenhuma disciplina aparece como concluída e o progresso fica em zero.',
+   feito: () => S.historico.length > 0},
+  {tela: 'planner', titulo: 'Monte o plano dos próximos semestres', botao: 'Montar plano',
+   texto: 'Arraste as disciplinas que pretende cursar. O Rumo avisa de pré-requisito faltando e choque de horário.',
+   feito: planoComItens},
+  {tela: 'calendario', titulo: 'Escolha turmas e horários', botao: 'Ver minha semana',
+   texto: 'Veja o plano na semana e escolha a turma de cada disciplina sem bater horário.',
+   pular: () => !S.turmas.length,
+   feito: () => S.planos.some(p => p.semestres.some(s => s.itens.some(i => i.turma_id || i.encontros_livres?.length)))},
+  {tela: 'simulador', titulo: 'Teste o futuro no Simulador', botao: 'Abrir simulador',
+   texto: 'Veja a formatura prevista, os riscos de cada semestre e o que acontece se você reprovar.',
+   feito: () => typeof SIM !== 'undefined' && SIM.sim.estado === 'ok'},
+];
+const passosDaRota = () => ROTA.filter(p => !(p.pular && p.pular()));
+
+// Marca ✓ no menu e mostra, no rodapé, o próximo passo (só fora da tela dele e fora do Painel, que já tem o cartão).
+function atualizarRota() {
+  const ativos = passosDaRota();
+  ROTA.forEach(p => {
+    const el = document.querySelector(`.nav-item[data-page="${p.tela}"]`);
+    if (!el) return;
+    el.classList.toggle('feito', !!p.feito());
+    el.classList.toggle('pulado', !ativos.includes(p));
+  });
+  const barra = document.getElementById('proximo-passo');
+  if (!barra) return;
+  const proximo = ativos.find(p => !p.feito());
+  if (!S.curso || !proximo || proximo.tela === S.currentPage || S.currentPage === 'dashboard') { barra.hidden = true; return; }
+  barra.innerHTML = `<span class="pp-rot">Próximo passo · ${ROTA.indexOf(proximo) + 1} de ${ROTA.length}</span>
+    <b>${esc(proximo.titulo)}</b><span class="pp-txt">${esc(proximo.texto)}</span>
+    <button class="btn btn-primary btn-sm" onclick="irPara('${proximo.tela}')">${esc(proximo.botao)} →</button>`;
+  barra.hidden = false;
+}
+
 function irPara(page) {
   navTo(page, document.querySelector(`.nav-item[data-page="${page}"]`));
 }
 
 // Uma frase por tela: o que ela mostra e o que fazer aqui. Aparece sob o título.
 const DICAS_DE_PAGINA = {
-  dashboard: 'Resumo de onde você está: quanto já fez, o que pode cursar agora e o que está travado por pré-requisito.',
-  planner: 'Arraste disciplinas da lista para os semestres. Cada semestre mostra créditos, choques de horário e pré-requisitos faltando.',
+  dashboard: 'Onde você está na rota: quanto já fez, o que pode cursar agora e o que está travado por pré-requisito.',
+  historico: 'Passo 1 de 4 · O que você já cursou. É daqui que o Rumo sabe o que está concluído e libera as próximas disciplinas.',
+  planner: 'Passo 2 de 4 · Arraste disciplinas da lista para os semestres. Cada semestre mostra créditos, choques de horário e pré-requisitos faltando.',
+  calendario: 'Passo 3 de 4 · A sua semana em horários, com as turmas do plano. Escolha o semestre e a turma de cada disciplina.',
+  simulador: 'Passo 4 de 4 · E se eu seguir este plano? Mostra os riscos semestre a semestre e a formatura prevista, e sugere um plano melhor.',
   fluxograma: 'Mapa do curso por período. A cor de cada caixa diz se você já fez, está fazendo, pode fazer ou ainda está bloqueado. Clique para ver detalhes.',
-  calendario: 'A sua semana em horários, com as turmas do plano. Escolha o semestre e a turma de cada disciplina.',
-  historico: 'O que você já cursou. É daqui que o Rumo sabe o que está concluído e libera as próximas disciplinas.',
-  disciplinas: 'Todas as disciplinas do curso: créditos, em que períodos são ofertadas (par, ímpar ou sempre) e pré-requisitos.',
-  simulador: 'E se eu seguir este plano? Mostra riscos semestre a semestre, a previsão de formatura e sugere um plano melhor.',
+  disciplinas: 'Todas as disciplinas do curso: créditos, em que períodos são ofertadas (par, ímpar ou sempre) e pré-requisitos. Informar par/ímpar deixa o Simulador exato.',
 };
 
 function render() {
   const titles = {
-    dashboard: 'Dashboard',
+    dashboard: 'Painel',
     planner: 'Planejamento de Matrícula',
     fluxograma: 'Fluxograma Curricular',
     calendario: 'Calendário Semanal',
@@ -214,6 +258,7 @@ function render() {
   const pages = { dashboard, planner, fluxograma, calendario, historico, disciplinas, simulador };
   const fn = pages[S.currentPage];
   if (fn) fn();
+  atualizarRota();
 }
 
 // ═══════════════════════════════════════════════════════

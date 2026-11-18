@@ -107,6 +107,7 @@ window.simRodar = async function (manual = false) {
     if (manual) toast('Simulação atualizada.', 'success', 2000);
   }
   desenharSimulacao();
+  atualizarRota();
 };
 
 function desenharSimulacao() {

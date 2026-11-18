@@ -4,7 +4,7 @@
 // Menu acessível: item vira botão de teclado; no celular/ícones o nome aparece em "title".
 document.querySelectorAll('.nav-item').forEach(n => {
   n.setAttribute('role', 'button'); n.tabIndex = 0;
-  n.title = n.textContent.trim();
+  n.title = (n.querySelector('.nav-txt b') || n).textContent.trim();
   n.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); n.click(); } });
 });
 document.querySelector('.nav-item.active')?.setAttribute('aria-current', 'page');
