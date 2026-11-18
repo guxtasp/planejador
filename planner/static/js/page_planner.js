@@ -58,7 +58,7 @@ function planner() {
   const c = document.getElementById('content');
 
   if (!plano) {
-    c.innerHTML = `<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/></svg><div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:12px">Nenhum plano</div><button class="btn btn-primary" onclick="newPlanoModal()">+ Criar plano</button></div>`;
+    c.innerHTML = `<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/></svg><div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:6px">Você ainda não tem um plano</div><div style="max-width:420px;margin:0 auto 14px">Um plano é a sua previsão de matrícula, semestre a semestre. Crie um, depois arraste disciplinas da lista para cada semestre e veja na hora se há conflito ou pré-requisito faltando. Você pode ter vários planos e comparar.</div><button class="btn btn-primary" onclick="newPlanoModal()">+ Criar meu primeiro plano</button></div>`;
     return;
   }
 
@@ -134,6 +134,7 @@ function renderPaletteItems(discs, aprovados, plannedIds) {
         <span class="tag">${credStr(d.creditos)}</span>
         <span class="tag">${valorOu(d.carga_h, 'h')}</span>
         <span class="tag">${periodStr(d.periodo)}</span>
+        ${d.periodicidade === 'impar' || d.periodicidade === 'par' ? periodicidadeBadge(d.periodicidade) : ''}
       </div>
     </div>`;
   }).join('');

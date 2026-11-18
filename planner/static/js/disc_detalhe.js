@@ -23,7 +23,7 @@ function showDiscDetail(id) {
       <div>
         <div style="font-size:11px;color:var(--text3);font-weight:700;letter-spacing:.06em">${esc(d.codigo)}</div>
         <h2 style="margin-bottom:2px;font-size:17px">${esc(d.nome)}</h2>
-        <div style="font-size:12px;color:var(--text2)">${periodStr(d.periodo)}</div>
+        <div style="font-size:12px;color:var(--text2)">${periodStr(d.periodo)} · ${periodicidadeBadge(d.periodicidade)}</div>
       </div>
     </div>
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px">

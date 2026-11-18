@@ -184,7 +184,7 @@ _TIPOS: dict[str, _Tipo] = {
     "disciplinas.csv": _Tipo(
         chave=lambda r: (_norm(r.codigo),),
         rotulo=lambda r: r.codigo,
-        campos=("nome", "tipo", "creditos", "carga_h", "periodo_sugerido", "cor"),
+        campos=("nome", "tipo", "creditos", "carga_h", "periodo_sugerido", "cor", "periodicidade"),
         existentes=lambda ctx: list(ctx.estado.disciplinas),
     ),
     "requisitos.csv": _Tipo(

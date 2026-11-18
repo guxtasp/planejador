@@ -91,7 +91,7 @@ function gradeDoCalendario(eventos) {
 function renderCalendar(semId) {
   const sem = semestreDoCalendario(semId);
   if (!sem) {
-    return `<div class="empty" style="padding:60px">${TEXTO_VAZIO_CALENDARIO}Escolha um semestre</div>`;
+    return `<div class="empty" style="padding:60px">${TEXTO_VAZIO_CALENDARIO}<div style="font-weight:600;color:var(--text);margin-bottom:4px">Escolha um semestre</div>O calendário mostra a semana de um semestre do seu plano. Se ainda não há semestres, crie-os em Planejamento.</div>`;
   }
 
   // Só conflito CONFIRMADO (turmas já escolhidas) é pintado de vermelho.

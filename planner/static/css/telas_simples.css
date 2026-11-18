@@ -13,6 +13,15 @@ input:focus-visible{outline:2px solid var(--accent2);outline-offset:1px}
 .btn:disabled{opacity:.6;cursor:default}
 .btn:focus-visible,a:focus-visible{outline:2px solid var(--accent2);outline-offset:2px}
 a{color:var(--accent2)}
+.marca{display:inline-flex;align-items:center;gap:10px;font-family:var(--font-display);font-weight:700;letter-spacing:-.02em;color:var(--text);text-decoration:none}
+.marca img{width:1.25em;height:1.25em}
+.lede{font-size:15px;margin-bottom:6px}
+.etapas{margin:12px 0 0 20px;font-size:14px;color:var(--text2)}
+.etapas li{margin-bottom:4px}
+.porque{margin-top:22px;font-size:13px;color:var(--text2);background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px}
+.porque b{color:var(--text);font-family:var(--font-display);font-size:14px}
+.porque ul{margin:6px 0 0 18px}
+.porque li{margin-bottom:3px}
 .msg{margin-top:16px;font-size:14px;padding:10px 12px;border-radius:0 8px 8px 0;background:var(--bg3);border-left:3px solid var(--accent)}
 .msg.erro{border-left-color:var(--red)}
 .msg.ok{border-left-color:var(--green)}

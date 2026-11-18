@@ -90,7 +90,7 @@ async function navTo(page, el) {
 }
 
 // Cores só de exibição (não são gravadas): usadas quando a disciplina não tem `cor`.
-const COR_PADRAO = {obrigatoria: '#1F4FD8', optativa: '#0F9D8A', eletiva: '#D98E04'};
+const COR_PADRAO = {obrigatoria: '#4338CA', optativa: '#0F9D8A', eletiva: '#D98E04'};
 
 // A API nova usa nomes do banco (`periodo_sugerido`, `requisitos`); as telas
 // herdadas esperam `periodo`, `prerequisitos`, `horarios`. Este é o único
@@ -99,7 +99,7 @@ function adaptarDisciplina(d) {
   return {
     ...d,
     periodo: d.periodo_sugerido,
-    cor: d.cor || COR_PADRAO[d.tipo] || '#1F4FD8',
+    cor: d.cor || COR_PADRAO[d.tipo] || '#4338CA',
     prerequisitos: d.requisitos || [],
     horarios: [],   // horários vêm das turmas (Etapa 4B)
   };
@@ -136,7 +136,7 @@ async function carregarTudo() {
   }
   S.disciplinas = resp.disciplinas.map(adaptarDisciplina);
   document.getElementById('curso-ativo-nome').textContent = resp.curso.nome;
-  document.title = `${resp.curso.nome} · Trilha`;
+  document.title = `${resp.curso.nome} · Rumo`;
 
   if (!planosJaCarregados && planosOk) await Planos.migrarDoNavegador();
   S.planos = Planos.planos();
@@ -188,6 +188,16 @@ function irPara(page) {
   navTo(page, document.querySelector(`.nav-item[data-page="${page}"]`));
 }
 
+// Uma frase por tela: o que ela mostra e o que fazer aqui. Aparece sob o título.
+const DICAS_DE_PAGINA = {
+  dashboard: 'Resumo de onde você está: quanto já fez, o que pode cursar agora e o que está travado por pré-requisito.',
+  planner: 'Arraste disciplinas da lista para os semestres. Cada semestre mostra créditos, choques de horário e pré-requisitos faltando.',
+  fluxograma: 'Mapa do curso por período. A cor de cada caixa diz se você já fez, está fazendo, pode fazer ou ainda está bloqueado. Clique para ver detalhes.',
+  calendario: 'A sua semana em horários, com as turmas do plano. Escolha o semestre e a turma de cada disciplina.',
+  historico: 'O que você já cursou. É daqui que o Rumo sabe o que está concluído e libera as próximas disciplinas.',
+  disciplinas: 'Todas as disciplinas do curso: créditos, em que períodos são ofertadas (par, ímpar ou sempre) e pré-requisitos.',
+};
+
 function render() {
   const titles = {
     dashboard: 'Dashboard',
@@ -198,6 +208,7 @@ function render() {
     disciplinas: 'Base de Disciplinas',
   };
   document.getElementById('page-title').textContent = titles[S.currentPage] || '';
+  document.getElementById('page-hint').textContent = DICAS_DE_PAGINA[S.currentPage] || '';
   const pages = { dashboard, planner, fluxograma, calendario, historico, disciplinas };
   const fn = pages[S.currentPage];
   if (fn) fn();
@@ -248,6 +259,18 @@ function turmaRotulo(t) {
 function valorOu(v, sufixo = '') { return v == null ? '–' : `${v}${sufixo}`; }
 
 function credStr(n) { return n == null ? '– créditos' : (n===1?'1 crédito':`${n} créditos`); }
+
+// Em quais períodos letivos a disciplina é ofertada. `null` = o curso não informou (não é "sempre").
+const PERIODICIDADE = {
+  sempre: {curto: 'Todo período', longo: 'Todo período letivo (1 e 2)', cls: 'badge-green'},
+  impar:  {curto: 'Só ímpar',     longo: 'Só períodos ímpares (AAAA/1)', cls: 'badge-blue'},
+  par:    {curto: 'Só par',       longo: 'Só períodos pares (AAAA/2)',   cls: 'badge-purple'},
+};
+function periodicidadeBadge(p) {
+  const x = PERIODICIDADE[p];
+  return x ? `<span class="badge ${x.cls}" title="${esc(x.longo)}">${x.curto}</span>`
+           : '<span class="badge" title="O curso não informou em quais períodos a disciplina é ofertada">Oferta não informada</span>';
+}
 
 function periodStr(n) {
   if (n == null) return 'Sem período sugerido';

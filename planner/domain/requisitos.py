@@ -56,6 +56,9 @@ def _agrupar(requisitos: Iterable[Requisito]) -> list[tuple[str, list[int]]]:
     return list(termos.values())
 
 
+agrupar_requisitos = _agrupar   # nome público: o grafo e o otimizador usam a mesma regra de E/OU
+
+
 def avaliar_requisitos(
     requisitos: Iterable[Requisito],
     concluidas: Collection[int],

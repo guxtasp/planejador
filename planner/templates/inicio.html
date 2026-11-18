@@ -3,51 +3,110 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Trilha</title>
-<link rel="icon" type="image/svg+xml" href="/static/img/trilha.svg">
+<title>Rumo — do primeiro período ao diploma</title>
+<meta name="description" content="Rumo mostra o que falta no seu curso e ajuda a montar o plano de matrícula sem conflito de horário ou pré-requisito.">
+<link rel="icon" type="image/svg+xml" href="/static/img/rumo.svg">
 <link rel="stylesheet" href="/static/css/tokens.css">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:var(--font-ui);background:var(--bg);color:var(--text);padding:24px;max-width:860px;margin:0 auto;line-height:1.5}
-h1{font-size:26px;margin-bottom:4px}
-p,.hint{color:var(--text2);font-size:14px}
+body{font-family:var(--font-ui);background:var(--bg);color:var(--text);padding:20px 24px 48px;max-width:920px;margin:0 auto;line-height:1.55}
+h1,h2,h3{font-family:var(--font-display);letter-spacing:-.02em}
+p,.hint{color:var(--text2);font-size:15px}
 .hint{font-size:12px}
-.topo{margin:24px 0 8px}
-.btn{display:inline-block;background:var(--accent);color:var(--on-accent);border:0;border-radius:7px;padding:10px 18px;font-size:14px;cursor:pointer;font-family:inherit;text-decoration:none}
+a{color:var(--accent2)}
+.btn{display:inline-block;background:var(--accent);color:var(--on-accent);border:0;border-radius:9px;padding:12px 22px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;text-decoration:none}
 .btn:hover{background:var(--accent2)}
-.btn.sec{background:var(--bg3);border:1px solid var(--border);color:var(--text)}
-.btn:focus-visible,a:focus-visible{outline:2px solid var(--accent2);outline-offset:2px}
-.cursos{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-top:18px}
+.btn.sec{background:var(--bg2);border:1px solid var(--border);color:var(--text);font-weight:500}
+.btn.peq{padding:7px 13px;font-size:13px}
+.btn:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid var(--accent2);outline-offset:2px}
+
+/* Topo: marca à esquerda, conta à direita */
+.barra{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:40px}
+.barra .marca{font-size:22px}
+.conta{display:flex;gap:10px;align-items:center;font-size:13px;color:var(--text2)}
+
+/* Abertura */
+.hero{padding:44px 0 8px}
+.hero .selo{display:inline-block;font-size:12px;font-weight:600;color:var(--accent2);background:var(--bg2);border:1px solid var(--border);border-radius:99px;padding:4px 12px;margin-bottom:16px}
+.hero h1{font-size:clamp(30px,6vw,46px);line-height:1.08;max-width:15em}
+.hero h1 em{font-style:normal;color:var(--accent2)}
+.hero p.lede{font-size:17px;max-width:36em;margin-top:14px}
+.acao{margin-top:24px;display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.acao small{font-size:12px;color:var(--text3)}
+
+/* Como funciona */
+.secao{margin-top:42px}
+.secao>h2{font-size:20px;margin-bottom:4px}
+.secao>p{margin-bottom:14px}
+.passos{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;list-style:none;counter-reset:p}
+.passos li{counter-increment:p;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:18px;position:relative}
+.passos li::before{content:counter(p);display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:var(--accent);color:var(--on-accent);font-weight:700;font-size:14px;margin-bottom:10px}
+.passos h3{font-size:16px;margin-bottom:4px}
+.passos p{font-size:13px}
+.passos .dica{display:block;margin-top:8px;font-size:12px;color:var(--text3)}
+
+/* Seus cursos */
+.cursos{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-top:6px}
 .curso{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;display:flex;flex-direction:column;gap:6px}
-.curso h2{font-size:16px}
+.curso h3{font-size:17px}
 .curso .meta{font-size:12px;color:var(--text2)}
-.curso .num{font-size:12px;color:var(--text)}
+.curso .num{font-size:12px;color:var(--text3)}
 .curso .btn{margin-top:auto;text-align:center}
-.vazio{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:28px 22px;margin-top:22px}
-.vazio h2{font-size:18px;margin-bottom:8px}
-.vazio ol{margin:14px 0 18px 20px;color:var(--text2);font-size:14px}
-.vazio li{margin-bottom:6px}
-.vazio li b{color:var(--text)}
-.rodape{margin-top:26px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-.conta{display:flex;gap:10px;align-items:center;justify-content:flex-end;font-size:13px;color:var(--text2);min-height:34px}
-.conta .btn{padding:6px 12px;font-size:12px}
+.retomar{background:var(--bg2);border:1px solid var(--border);border-left:4px solid var(--accent);border-radius:var(--radius);padding:16px 18px;margin-top:6px}
+.retomar b{font-family:var(--font-display)}
+
+/* Dúvidas */
+details{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:12px 16px;margin-top:8px}
+summary{cursor:pointer;font-weight:600;font-size:14px}
+details p{font-size:14px;margin-top:8px}
 .erro{border-left:3px solid var(--red);background:var(--bg3);padding:10px 12px;border-radius:0 8px 8px 0;margin-top:18px;font-size:14px}
+[hidden]{display:none!important}
 </style>
 </head>
 <body>
-<div class="conta" id="conta"></div>
-<header class="topo">
-  <h1 class="marca"><img src="/static/img/trilha.svg" alt="">Trilha</h1>
-  </header>
+<div class="barra">
+  <a class="marca" href="/" aria-label="Rumo — início"><img src="/static/img/rumo.svg" alt="">Rumo</a>
+  <div class="conta" id="conta"></div>
+</div>
+
+<header class="hero">
+  <span class="selo">Planejador de matrícula</span>
+  <h1>Do primeiro período ao diploma, <em>sem surpresa.</em></h1>
+  <p class="lede">O Rumo mostra o que ainda falta no seu curso e ajuda a montar o plano de cada semestre: avisa de pré-requisito faltando, de conflito de horário e de excesso de créditos antes de você se matricular.</p>
+  <div class="acao" id="acao"></div>
+</header>
 
 <main id="conteudo" aria-live="polite"><p class="hint" style="margin-top:22px">Carregando…</p></main>
+
+<section class="secao" aria-labelledby="como">
+  <h2 id="como">Como funciona</h2>
+  <p>Três passos, nesta ordem. Dá para parar e continuar depois: tudo fica salvo na sua conta.</p>
+  <ol class="passos">
+    <li><h3>Traga o seu curso</h3>
+      <p>Envie a matriz curricular (disciplinas, créditos, pré-requisitos) em planilhas CSV. Não tem? A tela tem um texto pronto para pedir a uma IA que monte as planilhas a partir do PDF do curso.</p>
+      <span class="dica">Você revisa tudo numa prévia antes de gravar.</span></li>
+    <li><h3>Conte o que já cursou</h3>
+      <p>Marque as disciplinas aprovadas e as que está cursando. É assim que o Rumo sabe o que já está feito e o que você pode cursar agora.</p>
+      <span class="dica">Sem isso, nada aparece como concluído.</span></li>
+    <li><h3>Monte e confira o plano</h3>
+      <p>Arraste disciplinas para os próximos semestres. Cada semestre mostra créditos, pré-requisitos faltando e choques de horário, e o calendário mostra a sua semana.</p>
+      <span class="dica">Você pode ter vários planos e comparar.</span></li>
+  </ol>
+</section>
+
+<section class="secao" aria-labelledby="duvidas">
+  <h2 id="duvidas">Dúvidas rápidas</h2>
+  <details><summary>Preciso criar senha?</summary><p>Não. Você entra com o seu e-mail ou conta Google, sem senha para lembrar.</p></details>
+  <details><summary>Meus dados ficam públicos?</summary><p>Não. O curso que você traz é privado por padrão: só você enxerga o curso, o histórico e os planos.</p></details>
+  <details><summary>Não tenho os arquivos CSV. E agora?</summary><p>Na tela “Trazer curso” há um texto pronto para colar numa IA junto com o PDF da matriz curricular (ou com o quadro de horários). Ela devolve as planilhas; você confere na prévia.</p></details>
+  <details><summary>O que quer dizer disciplina “ímpar” ou “par”?</summary><p>Algumas disciplinas só abrem em um dos semestres do ano: as <b>ímpares</b> no primeiro período letivo (por exemplo, 2027/1) e as <b>pares</b> no segundo (2027/2). O Rumo leva isso em conta para você não planejar uma disciplina num semestre em que ela não existe.</p></details>
+</section>
 
 <script>
 // Rede de segurança: se o link do e-mail cair aqui (URL de retorno não cadastrada no Supabase),
 // repassa o token à tela de entrada, que sabe usá-lo.
 if (location.hash.includes('access_token=') || location.hash.includes('error=')) location.replace('/entrar' + location.hash);
 
-// Onboarding: sem curso -> guia até a importação; com cursos -> escolher um ou trazer outro.
 // Textos de curso vêm de CSV: tudo entra por textContent (nunca innerHTML).
 function el(tag, props = {}, ...filhos) {
   const e = document.createElement(tag);
@@ -59,41 +118,43 @@ function el(tag, props = {}, ...filhos) {
 }
 const plural = (n, um, varios) => `${n} ${n === 1 ? um : varios}`;
 
-function telaVazia(logado) {
-  return el('section', {class: 'vazio'},
-    el('h2', {text: 'Nenhum curso ainda'}),
-    logado ? el('a', {class: 'btn', href: '/importar', text: '+ Trazer meu curso'})
-           : el('a', {class: 'btn', href: '/entrar?proximo=/importar', text: 'Entrar e trazer meu curso'}));
+// O que fazer AGORA depende de onde a pessoa está: visitante, logada sem curso, ou com curso.
+function acaoPrincipal(logado, cursos) {
+  if (!logado) return [
+    el('a', {class: 'btn', href: '/entrar?proximo=/importar', text: 'Entrar e começar'}),
+    el('small', {text: 'Sem senha. Leva menos de um minuto.'})];
+  if (!cursos.length) return [
+    el('a', {class: 'btn', href: '/importar', text: 'Passo 1: trazer meu curso'}),
+    el('small', {text: 'Você ainda não tem nenhum curso.'})];
+  return [];
 }
 
 function cartaoCurso(c) {
   const meta = [c.instituicao, c.versao_matriz && `Matriz ${c.versao_matriz}`].filter(Boolean).join(' · ');
   return el('article', {class: 'curso'},
-    el('h2', {text: c.nome}),
+    el('h3', {text: c.nome}),
     meta ? el('div', {class: 'meta', text: meta}) : '',
     el('div', {class: 'num', text: `${plural(c.total_disciplinas, 'disciplina', 'disciplinas')} · ${plural(c.total_turmas, 'turma', 'turmas')}`}),
-    el('a', {class: 'btn', href: `/curso/${c.id}`, text: 'Abrir'}));
+    el('a', {class: 'btn peq', href: `/curso/${c.id}`, text: 'Abrir'}));
 }
 
-function telaCursos(cursos, logado) {
-  return el('section', {},
-    el('h2', {text: cursos.length === 1 ? 'Seu curso' : 'Seus cursos', style: 'font-size:18px;margin-top:22px'}),
+function telaCursos(cursos) {
+  return el('section', {class: 'secao', style: 'margin-top:30px'},
+    el('h2', {text: cursos.length === 1 ? 'Continue de onde parou' : 'Seus cursos'}),
+    el('p', {text: 'Abra o curso para ver o painel, informar o histórico e montar o plano.'}),
     el('div', {class: 'cursos'}, ...cursos.map(cartaoCurso)),
-    el('div', {class: 'rodape'}, ...(logado ? [
-      el('a', {class: 'btn sec', href: '/importar', text: '+ Trazer curso'})]
-    : [el('a', {class: 'btn sec', href: '/entrar?proximo=/importar', text: 'Entrar para trazer o meu curso'})])));
+    el('div', {class: 'acao'}, el('a', {class: 'btn sec peq', href: '/importar', text: '+ Trazer outro curso'})));
 }
 
 // Barra da conta (canto superior): e-mail + Sair, ou o convite para entrar.
-// O e-mail vem do servidor, mas entra por textContent como todo o resto.
 function barraDaConta(usuario) {
-  if (!usuario) return el('a', {class: 'btn sec', href: '/entrar', text: 'Entrar'});
-  const sair = el('button', {class: 'btn sec', type: 'button', text: 'Sair'});
+  if (!usuario) return el('a', {class: 'btn sec peq', href: '/entrar', text: 'Entrar'});
+  const sair = el('button', {class: 'btn sec peq', type: 'button', text: 'Sair'});
   sair.addEventListener('click', async () => {
     sair.disabled = true;
     try { await fetch('/api/auth/sair', {method: 'POST'}); } finally { location.reload(); }
   });
-  return el('span', {}, el('span', {text: usuario.email + ' '}), sair);
+  return el('span', {class: 'conta'}, el('span', {text: usuario.email}), sair);
 }
 
 (async () => {
@@ -104,10 +165,12 @@ function barraDaConta(usuario) {
     if (!j.ok || !eu.ok) throw new Error(j.erro || eu.erro || 'Resposta inesperada do servidor.');
     const logado = Boolean(eu.usuario);
     document.getElementById('conta').replaceChildren(barraDaConta(eu.usuario));
-    raiz.replaceChildren(j.cursos.length ? telaCursos(j.cursos, logado) : telaVazia(logado));
+    document.getElementById('acao').replaceChildren(...acaoPrincipal(logado, j.cursos));
+    raiz.replaceChildren(...(j.cursos.length ? [telaCursos(j.cursos)] : []));
   } catch (e) {
+    document.getElementById('acao').replaceChildren(el('a', {class: 'btn', href: '/entrar', text: 'Entrar'}));
     raiz.replaceChildren(el('div', {class: 'erro'},
-      el('b', {text: 'Não foi possível carregar os cursos. '}), `Tente recarregar a página. (${e.message})`));
+      el('b', {text: 'Não foi possível carregar os seus cursos. '}), `Tente recarregar a página. (${e.message})`));
   }
 })();
 </script>

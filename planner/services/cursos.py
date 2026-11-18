@@ -47,6 +47,7 @@ class CursoService:
                     "id": d.id, "codigo": d.codigo, "nome": d.nome, "tipo": d.tipo,
                     "creditos": d.creditos, "carga_h": d.carga_h,
                     "periodo_sugerido": d.periodo_sugerido, "cor": d.cor,
+                    "periodicidade": d.periodicidade,
                     "requisitos": [
                         {"id": r.requisito_id, "codigo": por_id[r.requisito_id].codigo,
                          "nome": por_id[r.requisito_id].nome, "tipo": r.tipo, "grupo_alt": r.grupo_alt}

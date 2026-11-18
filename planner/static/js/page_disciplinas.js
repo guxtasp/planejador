@@ -30,7 +30,7 @@ window.renderDiscTable = function(q) {
     <table style="width:100%;border-collapse:collapse">
       <thead>
         <tr style="background:var(--bg3)">
-          ${['Código','Nome','Período','CH','Créditos','Turmas','Pré-req',''].map(h=>
+          ${['Código','Nome','Período','Oferta','CH','Créditos','Turmas','Pré-req',''].map(h=>
             `<th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border)">${h}</th>`
           ).join('')}
         </tr>
@@ -44,6 +44,7 @@ window.renderDiscTable = function(q) {
             </td>
             <td style="padding:10px 14px;font-size:13px;font-weight:500">${esc(d.nome)}</td>
             <td style="padding:10px 14px;font-size:12px;color:var(--text2)">${periodStr(d.periodo)}</td>
+            <td style="padding:10px 14px">${periodicidadeBadge(d.periodicidade)}</td>
             <td style="padding:10px 14px;font-size:12px;color:var(--text2)">${valorOu(d.carga_h, 'h')}</td>
             <td style="padding:10px 14px;font-size:12px;color:var(--text2)">${valorOu(d.creditos)}</td>
             <td style="padding:10px 14px;font-size:11px;color:var(--text2)">

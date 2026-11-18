@@ -21,7 +21,10 @@ nav{flex:1;padding:8px 0;overflow-y:auto}
 
 /* TOPBAR */
 #topbar{display:flex;align-items:center;gap:12px;padding:14px 24px;background:var(--bg2);border-bottom:1px solid var(--border)}
-#topbar h2{font-size:16px;font-weight:600;flex:1}
+#topbar .titulo{flex:1;min-width:0}
+#topbar h2{font-size:16px;font-weight:600}
+#page-hint{font-size:12px;color:var(--text2);margin-top:2px;max-width:62em}
+@media (max-width:700px){#page-hint{display:none}}
 .btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:7px;font-size:13px;font-weight:500;border:none;transition:.15s;cursor:pointer}
 .btn-primary{background:var(--accent);color:var(--on-accent)}
 .btn-primary:hover{background:var(--accent2)}
@@ -239,6 +242,16 @@ body{font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
 @media (hover:none){.disc-card:hover{border-color:var(--border);background:var(--bg3)}.disc-card .disc-actions{display:flex}}
 .fluxo-disc:hover,.disc-list-item:hover,.disc-card:hover{box-shadow:0 2px 12px rgba(0,0,0,.25)}
 
+/* Primeiros passos (dashboard) */
+.passos-lista{list-style:none;counter-reset:pp;display:grid;gap:8px}
+.passos-lista li{counter-increment:pp;display:flex;align-items:center;gap:12px;justify-content:space-between;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg3);font-size:13px}
+.passos-lista li>div{flex:1}
+.passos-lista li b::before{content:counter(pp) ". ";color:var(--text3)}
+.passos-lista li.feito{opacity:.7}
+.passos-lista li.feito b::before{content:"✓ ";color:var(--green)}
+.passos-lista li.atual{border-color:var(--accent);background:var(--bg2)}
+.pl-txt{color:var(--text2);font-size:12px;margin-top:2px}
+
 /* Menu: item ativo bem marcado */
 .nav-item{min-height:40px}
 .nav-item.active{font-weight:600}
@@ -297,7 +310,7 @@ table thead th{position:sticky;top:0;background:var(--bg2);z-index:1}
 
 
 /* ═══════════════════════════════════════════════════════════════
-   TRILHA — marca, "caminho" na barra lateral e linha de metrô do fluxograma
+   RUMO — marca, "caminho" na barra lateral e linha de paradas do fluxograma
    ═══════════════════════════════════════════════════════════════ */
 .logo{padding:18px 16px 14px}
 .logo .marca{font-size:24px}

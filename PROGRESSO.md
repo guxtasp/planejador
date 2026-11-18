@@ -560,3 +560,28 @@ Problema: o calendário só mostrava encontros de **turmas importadas**; sem qua
 - **Elemento de assinatura:** fluxograma com linha de metrô (estação do período: verde=concluído, amarelo=em curso) e "caminho" de progresso na barra lateral.
 - Telas `inicio`, `entrar`, `entrar_confirmar`, `importacao` e o app usam os mesmos tokens. Cores de disciplina vindas dos dados agora só aparecem como borda/ponto (nunca como texto).
 - Verificação: capturas em claro, escuro e 390px; 0 erros de JS. Falta revisar `importacao.html` visualmente e o modal de detalhe da disciplina nos dois temas.
+
+
+## Peças 3 e 4 — Simulador de futuro, sugestão otimizada e rebranding da tela inicial
+
+Trabalho dividido em PARTES. Cada parte termina com algo verificável; o estado de cada uma está marcado.
+Legenda: ✅ pronto e testado · 🟡 escrito, ainda NÃO testado · ⬜ não começado.
+
+| Parte | Conteúdo | Estado |
+|---|---|---|
+| A | Domínio do simulador: `domain/restante.py` (calendário de oferta par/ímpar/sempre, o que falta cursar), `domain/replanejamento.py` ("e se eu reprovar em X"), `domain/simulacao.py` (riscos, caminho crítico, horários projetados, conflitos futuros) | 🟡 teste rápido manual passou (riscos, caminho crítico e cenários saíram corretos); falta `pytest` próprio |
+| B | Domínio do otimizador: `domain/otimizador.py` (grafo → limite inferior; guloso; recozimento simulado; alocação de turmas; optativas) | 🟡 escrito; tem um ponto pendente (requisitos originais para o replanejamento) e NUNCA foi executado |
+| C | Serviço + API: `POST /api/cursos/<id>/simulacao`, `POST /api/cursos/<id>/simulacao/sugerir`, edição da periodicidade na tela (dono do curso) | ⬜ |
+| D | Tela "Simulador" em blocos (visão geral, linha do tempo, riscos, caminho crítico, e se eu reprovar, sugestão) + CSS | ⬜ |
+| E | Rebranding da tela inicial (`inicio.html`): novo hero, "o que o Rumo faz", passos atualizados, dúvidas | ⬜ |
+| F | Testes (`test_simulacao_dominio`, `test_otimizador`, `test_api_simulacao`), docs e este arquivo | ⬜ |
+
+Baseline antes das peças: 637 testes passando.
+
+### Decisões já tomadas
+- Periodicidade desconhecida nunca vira "sempre": o simulador usa a cadastrada, senão ESTIMA pelo período sugerido (marcada "estimada"), senão "desconhecida".
+- Horário de período futuro é PROJEÇÃO (último período de mesma paridade) e a tela diz isso.
+- Quem está cursando conta como concluído no início do plano; o planejado antes conta como concluído depois (premissas devolvidas pela API).
+- Créditos de optativas que faltam viram um bloco "reservar N créditos", sem inventar disciplinas.
+- Período inicial da simulação: o primeiro semestre do plano, ou o informado na tela (nunca assumido pela data do servidor).
+- Otimizador determinístico (semente) e só com a biblioteca padrão; domínio continua puro (`test_domain_pureza`).

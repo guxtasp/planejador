@@ -5,20 +5,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!-- O token está na URL: não o repasse a outros sites por Referer. -->
 <meta name="referrer" content="no-referrer">
-<title>Confirmar entrada — Trilha</title>
-<link rel="icon" type="image/svg+xml" href="/static/img/trilha.svg">
+<title>Confirmar entrada — Rumo</title>
+<link rel="icon" type="image/svg+xml" href="/static/img/rumo.svg">
 <link rel="stylesheet" href="/static/css/tokens.css">
 <link rel="stylesheet" href="/static/css/telas_simples.css">
 </head>
 <body>
-<a class="marca" href="/" style="font-size:22px;margin-top:8px"><img src="/static/img/trilha.svg" alt="">Trilha</a>
-<h1>Confirmar entrada</h1>
-<p>Clique no botão para entrar. Este passo extra evita que programas que "abrem" links de e-mail gastem o seu link.</p>
+<a class="marca" href="/" style="font-size:22px;margin-top:8px"><img src="/static/img/rumo.svg" alt="">Rumo</a>
+<h1>Falta só um clique</h1>
+<p class="lede">Clique em <b>Entrar no Rumo</b> para concluir. Este passo extra existe para que programas que “abrem” links de e-mail automaticamente não gastem o seu link.</p>
 
 <main class="caixa">
-  <button class="btn" id="entrar" type="button" style="margin-top:0">Entrar</button>
+  <button class="btn" id="entrar" type="button" style="margin-top:0">Entrar no Rumo</button>
   <div class="msg" id="msg" role="status" aria-live="polite"></div>
-  <p class="hint" id="novo" hidden style="margin-top:12px"><a href="/entrar">Pedir um novo link</a></p>
+  <p class="hint" id="novo" hidden style="margin-top:12px">O link venceu ou já foi usado. <a href="/entrar">Pedir um novo link</a></p>
 </main>
 
 <script>
@@ -38,7 +38,7 @@ $('entrar').addEventListener('click', async () => {
     });
     const j = await r.json();
     if (!r.ok) { mostrar(j.erro || 'Não foi possível entrar.', 'erro'); $('novo').hidden = false; return; }
-    mostrar('Pronto! Abrindo o planejador…', 'ok');
+    mostrar('Pronto! Abrindo o Rumo…', 'ok');
     location.replace(j.proximo || '/');
   } catch { mostrar('Sem conexão com o servidor. Tente de novo.', 'erro'); $('entrar').disabled = false; }
 });

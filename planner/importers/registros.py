@@ -37,6 +37,7 @@ class DisciplinaCsv:
     carga_h: int | None = None
     periodo_sugerido: int | None = None
     cor: str | None = None
+    periodicidade: str | None = None   # sempre | impar | par
 
 
 @dataclass(frozen=True)

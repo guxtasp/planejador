@@ -111,7 +111,8 @@ def _curso(c: Curso) -> CursoExistente:
 
 
 def _disciplina(d) -> DisciplinaExistente:
-    return DisciplinaExistente(d.codigo, d.nome, d.tipo, d.creditos, d.carga_h, d.periodo_sugerido, d.cor)
+    return DisciplinaExistente(d.codigo, d.nome, d.tipo, d.creditos, d.carga_h, d.periodo_sugerido, d.cor,
+                               d.periodicidade)
 
 
 def _turma(codigo_disciplina: str, t) -> TurmaExistente:

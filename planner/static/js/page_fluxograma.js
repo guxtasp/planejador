@@ -26,7 +26,7 @@ function fluxograma() {
   const semHistorico = S.historico.length === 0;
   c.innerHTML = `
   ${semHistorico ? `<div class="hint" style="margin-bottom:16px;display:flex;align-items:center;gap:12px;font-size:12px;color:var(--text3)">
-    Histórico vazio.
+    Você ainda não informou o histórico, então nada aparece como concluído.
     <button class="btn btn-primary btn-sm" onclick="irPara('historico')">+ Informar histórico</button></div>` : ''}
   <div class="legend" style="margin-bottom:16px">
     <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div>Concluída</div>

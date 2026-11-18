@@ -22,6 +22,11 @@ TIPO_ELETIVA = "eletiva"
 REQ_PRE = "pre"  # precisa ter sido CONCLUÍDO antes
 REQ_CO = "co"    # pode ser cursado no MESMO semestre
 
+PER_SEMPRE = "sempre"  # oferecida em todo período letivo
+PER_IMPAR = "impar"    # só nos períodos ímpares ("AAAA/1", "AAAA/3"…)
+PER_PAR = "par"        # só nos períodos pares ("AAAA/2"…)
+PERIODICIDADES = (PER_SEMPRE, PER_IMPAR, PER_PAR)
+
 STATUS_APROVADO = "aprovado"
 STATUS_REPROVADO = "reprovado"
 STATUS_CURSANDO = "cursando"
@@ -38,6 +43,8 @@ class Disciplina:
     creditos: int | None = None
     tipo: str = TIPO_OBRIGATORIA
     periodo_sugerido: int | None = None
+    # "sempre" | "impar" | "par"; None = oferta desconhecida (ver `domain.periodicidade`).
+    periodicidade: str | None = None
 
 
 @dataclass(frozen=True)

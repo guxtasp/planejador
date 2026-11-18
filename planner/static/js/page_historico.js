@@ -43,6 +43,7 @@ function historico() {
       <tbody>
         ${S.historico.length === 0
           ? `<tr><td colspan="8" class="empty" style="padding:40px;text-align:center">
+               <div style="max-width:440px;margin:0 auto 14px;color:var(--text2)"><b style="color:var(--text)">Nada informado ainda.</b><br>Adicione as disciplinas que você já fez (aprovado ou reprovado) e as que está cursando agora. Informe também o período letivo (ex.: 2025/2) para o Rumo calcular a sua média e prever a formatura.</div>
                <button class="btn btn-primary" onclick="historicoModal()">+ Adicionar disciplina</button></td></tr>`
           : S.historico.map(h => `
           <tr style="border-bottom:1px solid var(--border)" onmouseenter="this.style.background='var(--bg3)'" onmouseleave="this.style.background=''">

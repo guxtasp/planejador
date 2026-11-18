@@ -5,21 +5,28 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!-- A volta do link do e-mail traz o token no endereço (#access_token=...): não o repasse por Referer. -->
 <meta name="referrer" content="no-referrer">
-<title>Entrar — Trilha</title>
-<link rel="icon" type="image/svg+xml" href="/static/img/trilha.svg">
+<title>Entrar — Rumo</title>
+<link rel="icon" type="image/svg+xml" href="/static/img/rumo.svg">
 <link rel="stylesheet" href="/static/css/tokens.css">
 <link rel="stylesheet" href="/static/css/telas_simples.css">
 </head>
 <body>
-<a class="marca" href="/" style="font-size:22px;margin-top:8px"><img src="/static/img/trilha.svg" alt="">Trilha</a>
-<h1>Entrar</h1>
+<a class="marca" href="/" style="font-size:22px;margin-top:8px"><img src="/static/img/rumo.svg" alt="">Rumo</a>
+<h1>Entrar no Rumo</h1>
+<p class="lede" id="como">Sem senha para lembrar.</p>
+
+<ol class="etapas" id="etapas" aria-label="Como entrar" hidden>
+  <li>Digite o seu e-mail e peça o link.</li>
+  <li>Abra o e-mail e clique no link. Se preferir, digite o código de 6 dígitos que veio nele.</li>
+</ol>
 
 <main class="caixa">
-  <button class="btn" id="google" type="button" style="display:none">Entrar com Google</button>
+  <button class="btn" id="google" type="button" style="display:none">Continuar com Google</button>
   <form id="form" novalidate>
     <label for="email">E-mail</label>
     <input id="email" type="email" autocomplete="email" inputmode="email" placeholder="nome@exemplo.com" required autofocus>
     <button class="btn" id="enviar" type="submit">Receber link</button>
+    <p class="hint" style="margin-top:8px">Não chegou? Veja a caixa de spam. O pedido de um novo link é liberado após alguns segundos.</p>
   </form>
 
   <form id="form-codigo" class="passo2" novalidate hidden>
@@ -30,7 +37,15 @@
 
   <div class="msg" id="msg" role="status" aria-live="polite"></div>
 </main>
-<p class="hint" style="margin-top:14px"><a href="/">← Início</a></p>
+<aside class="porque">
+  <b>Por que entrar?</b>
+  <ul>
+    <li>Seu histórico e seus planos ficam salvos na sua conta e acompanham você em qualquer aparelho.</li>
+    <li>O curso que você traz é privado: só você enxerga.</li>
+    <li>Guardamos apenas o seu e-mail e o que você mesmo cadastrar no Rumo.</li>
+  </ul>
+</aside>
+<p class="hint" style="margin-top:14px"><a href="/">← Voltar ao início</a></p>
 
 <script>
 // Login pelo Supabase Auth (sem senha). O navegador fala com o Supabase; o nosso servidor só
@@ -110,7 +125,7 @@ async function pedirLink(email) {
   }
   if (!r.ok) return mostrar('Não foi possível enviar o e-mail agora. Tente de novo.', 'erro');
   iniciarEspera(60);
-  mostrar('Enviado. Abra o link no e-mail ou digite o código abaixo.', 'ok');
+  mostrar('Enviado! Abra o e-mail e clique no link, ou digite aqui o código que veio nele.', 'ok');
   $('form-codigo').hidden = false; $('codigo').focus();
 }
 
@@ -145,6 +160,13 @@ $('form-codigo').addEventListener('submit', async e => {
   finally { $('confirmar').disabled = false; }
 });
 
+// Texto que explica o método de entrada que ESTÁ disponível (a tela muda conforme a configuração).
+$('como').textContent = LOGIN.provedor === 'dev'
+  ? 'Modo de desenvolvimento: qualquer e-mail entra, sem confirmação.'
+  : LOGIN.provedor === 'supabase'
+    ? 'Sem senha para lembrar: entre com a sua conta Google. É só um clique.'
+    : 'Sem senha para lembrar: enviamos um link de acesso para o seu e-mail.';
+
 if (LOGIN.provedor === 'supabase') {
   // Google: o Supabase leva ao login do Google e volta para cá com #access_token=… (tratado abaixo).
   // Só Google: o formulário de e-mail (link/código) fica escondido. Para reativá-lo, remova a linha abaixo.
@@ -153,6 +175,10 @@ if (LOGIN.provedor === 'supabase') {
     guardar(CHAVE_PROXIMO, PROXIMO);
     location.href = `${LOGIN.url}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(location.origin + '/entrar')}`;
   });
+}
+if (LOGIN.provedor === 'supabase' && !$('form').hidden) {   // e-mail ligado: explica os dois passos
+  $('etapas').hidden = false;
+  $('como').textContent = 'Sem senha para lembrar: enviamos um link de acesso para o seu e-mail.';
 }
 if (LOGIN.provedor === 'dev') {} else if (!$('form').hidden) atualizarBotao();   // retoma a contagem se a página foi recarregada
 

@@ -25,7 +25,7 @@ def carregar_catalogo(
     """Uma consulta fixa por relação (sem N+1)."""
     modelos = repositorio.listar_do_curso(curso_id, com_requisitos=True, com_turmas=com_turmas)
     disciplinas = {
-        d.id: Disciplina(d.id, d.codigo, d.nome, d.creditos, d.tipo, d.periodo_sugerido)
+        d.id: Disciplina(d.id, d.codigo, d.nome, d.creditos, d.tipo, d.periodo_sugerido, d.periodicidade)
         for d in modelos
     }
     requisitos = {

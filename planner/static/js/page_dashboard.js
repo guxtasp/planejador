@@ -11,6 +11,27 @@ function textoPrevisao(prev, concluido) {
   return {valor: valorOu(prev.formatura), sub};
 }
 
+// Guia da primeira vez: some sozinho quando tudo estiver feito. Cada passo leva à tela certa.
+function primeirosPassos() {
+  const temPlano = S.planos.some(p => p.semestres.some(s => s.itens.length));
+  const passos = [
+    {feito: true, titulo: 'Curso trazido', texto: 'A matriz do seu curso já está aqui.'},
+    {feito: S.historico.length > 0, titulo: 'Informe o que você já cursou',
+     texto: 'Sem o histórico, nenhuma disciplina aparece como concluída e o progresso fica em zero.', tela: 'historico', botao: 'Informar histórico'},
+    {feito: temPlano, titulo: 'Monte o plano dos próximos semestres',
+     texto: 'Arraste as disciplinas que pretende cursar. O Rumo avisa de pré-requisito faltando e choque de horário.', tela: 'planner', botao: 'Montar plano'},
+  ];
+  if (passos.every(p => p.feito)) return '';
+  const proximo = passos.find(p => !p.feito);
+  return `<div class="card primeiros" style="margin-bottom:20px">
+    <div style="font-size:14px;font-weight:700;margin-bottom:10px">Primeiros passos</div>
+    <ol class="passos-lista">${passos.map(p => `<li class="${p.feito ? 'feito' : p === proximo ? 'atual' : ''}">
+      <div><b>${esc(p.titulo)}</b><div class="pl-txt">${esc(p.texto)}</div></div>
+      ${p === proximo ? `<button class="btn btn-primary btn-sm" onclick="irPara('${p.tela}')">${esc(p.botao)}</button>` : ''}
+    </li>`).join('')}</ol>
+  </div>`;
+}
+
 function dashboard() {
   const c = document.getElementById('content');
   const p = S.painel;
@@ -30,9 +51,7 @@ function dashboard() {
   const bloqueadas = porStatus('bloqueada');
 
   c.innerHTML = `
-  ${semHistorico ? `<div class="hint" style="margin-bottom:16px;display:flex;align-items:center;gap:12px;font-size:12px;color:var(--text3)">
-    Histórico vazio.
-    <button class="btn btn-primary btn-sm" onclick="irPara('historico')">+ Informar histórico</button></div>` : ''}
+  ${primeirosPassos()}
   <div class="grid-4" style="margin-bottom:20px">
     <div class="stat-card">
       <div class="stat-label">Progresso Geral</div>

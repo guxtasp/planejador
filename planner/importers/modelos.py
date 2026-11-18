@@ -15,7 +15,7 @@ _EXEMPLOS: dict[str, dict[str, str]] = {
     "curso.csv": {"nome": "Meu Curso", "versao_matriz": "2024", "duracao_semestres": "8",
                   "dias_letivos": "SEG|TER|QUA|QUI|SEX"},
     "disciplinas.csv": {"codigo": "ABC101", "nome": "Introdução ao Curso", "tipo": "obrigatoria",
-                        "creditos": "4", "carga_h": "60", "periodo_sugerido": "1", "cor": "#3b82f6"},
+                        "creditos": "4", "carga_h": "60", "periodo_sugerido": "1", "cor": "#3b82f6", "periodicidade": "sempre"},
     "requisitos.csv": {"disciplina": "ABC102", "requisito": "ABC101", "tipo": "pre", "grupo_alt": ""},
     "turmas.csv": {"disciplina": "ABC101", "periodo_letivo": "2026/1", "codigo_turma": "T1",
                    "docente": "", "vagas": "", "horarios": "SEG 08:00-10:00 | QUA 08:00-10:00", "local": ""},
@@ -113,6 +113,7 @@ FORMATOS:
 - tipo do requisito: pre (pré-requisito) | co (correquisito).
 - requisitos "A ou B": use o mesmo valor em grupo_alt nas linhas alternativas (ex.: G1). Sem grupo = todos obrigatórios.
 - periodo_letivo: AAAA/N (ex.: 2026/1). cor: #rrggbb (opcional).
+- periodicidade (disciplinas.csv): sempre | impar | par = em que períodos letivos a disciplina é oferecida (impar = só AAAA/1, par = só AAAA/2). Vazio se o documento não disser.
 - horarios (turmas.csv): "SEG 16:00-18:00 | QUI 14:00-16:00". O "|" separa encontros da MESMA turma (todos obrigatórios).
   Alternativas de matrícula (turma T1 ou T2) são LINHAS diferentes, nunca "|". Dias: SEG TER QUA QUI SEX SAB DOM.
 - codigo_turma é obrigatório em turmas.csv (T1, T2, P1...). Todo código em requisitos/turmas deve existir em disciplinas.csv.

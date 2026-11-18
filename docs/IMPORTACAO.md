@@ -30,6 +30,9 @@ Os nomes das colunas ignoram caixa e acento. Os modelos para download têm o cab
 | `requisitos.csv` | pré/correquisitos | disciplina, requisito, tipo |
 | `turmas.csv` | oferta de um período | disciplina, periodo_letivo, codigo_turma |
 
+`disciplinas.csv` aceita ainda **`periodicidade`**: `sempre` (todo período), `impar` (só `AAAA/1`) ou `par` (só `AAAA/2`).
+Vazio = desconhecido (o simulador estima pela paridade do período sugerido e marca como estimativa). Apelidos aceitos na coluna: `oferta`, `paridade`.
+
 `turmas.csv` aceita ainda `docente`, `vagas`, `horarios` e **`local`** (sala; vale para todos os encontros da turma).
 O **histórico do aluno não entra por CSV**: ele será informado dentro do app (o que você já cursou é pessoal, não do curso).
 

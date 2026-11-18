@@ -1,6 +1,6 @@
 /* ═══════════════════════════════════════════════════════════════════
-   TRILHA — identidade visual (fonte única de cores e tipografia)
-   Conceito: o curso é uma linha de metrô. Períodos são estações; a formatura é o terminal.
+   RUMO — identidade visual (fonte única de cores e tipografia)
+   Conceito: o curso é uma rota. Cada período é uma parada; o diploma (âmbar) é o destino.
    Claro por padrão ("papel de mapa"); escuro segue o sistema. Tudo que muda de tema está aqui.
    ═══════════════════════════════════════════════════════════════════ */
 @font-face{font-family:"Bricolage Grotesque";font-style:normal;font-weight:200 800;font-display:swap;
@@ -27,8 +27,8 @@
   --text:#0E1A2B;        /* tinta */
   --text2:#44546A;
   --text3:#62728A;
-  /* Linha principal (azul) e estados: cada estado é uma "linha" com cor própria */
-  --accent:#1F4FD8;  --accent2:#1A3FA8;  --on-accent:#FFFFFF;
+  /* Cor da marca (índigo) e estados: cada estado tem cor própria e NÃO muda com a marca */
+  --accent:#4338CA;  --accent2:#3730A3;  --on-accent:#FFFFFF;
   --green:#0E8F5F;   --green-ink:#0B6B48;     /* concluída */
   --yellow:#F2B705;  --yellow-ink:#7A5200;    /* cursando */
   --blue:#2563EB;    --blue-ink:#1D4ED8;      /* disponível / informação */
@@ -44,7 +44,7 @@
   :root{
     --bg:#0A111C; --bg2:#111A29; --bg3:#172234; --bg4:#1F2D45; --border:#27364F;
     --text:#E8EEF7; --text2:#A9B7CC; --text3:#8393AC;
-    --accent:#5B8DEF; --accent2:#8FB1F5; --on-accent:#08101D;
+    --accent:#8B8DF7; --accent2:#B4B6FA; --on-accent:#0B0B1F;
     --green:#2FBF8A; --green-ink:#6EE0B5;
     --yellow:#F5C242; --yellow-ink:#F7D27A;
     --blue:#6B9BF2; --blue-ink:#9DBBF7;

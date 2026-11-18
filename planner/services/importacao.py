@@ -143,7 +143,8 @@ class ImportacaoService:
             acao = acoes[("disciplinas.csv", r.linha)]
             if acao == INALTERADO:
                 continue
-            valores = {c: getattr(r, c) for c in ("nome", "tipo", "creditos", "carga_h", "periodo_sugerido", "cor")
+            valores = {c: getattr(r, c) for c in ("nome", "tipo", "creditos", "carga_h", "periodo_sugerido", "cor",
+                                                "periodicidade")
                        if getattr(r, c) is not None}
             if acao == NOVO:
                 existentes[r.codigo] = self._disciplinas.adicionar(

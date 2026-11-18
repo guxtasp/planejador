@@ -17,6 +17,20 @@ class TipoDisciplina(str, Enum):
     ELETIVA = "eletiva"
 
 
+class Periodicidade(str, Enum):
+    """
+    Em quais períodos letivos a disciplina é oferecida.
+
+    Segue a paridade do NÚMERO do período no ano ("2026/1" é ímpar, "2026/2" é par),
+    o mesmo critério das listas de oferta das universidades por semestre.
+    `NULL` no banco = oferta desconhecida (nunca é gravado "sempre" por falta de dado).
+    """
+
+    SEMPRE = "sempre"  # todo período letivo
+    IMPAR = "impar"    # só nos períodos ímpares (N = 1, 3, …)
+    PAR = "par"        # só nos períodos pares (N = 2, 4, …)
+
+
 class TipoRequisito(str, Enum):
     PRE = "pre"  # precisa ter sido cursado ANTES
     CO = "co"    # pode ser cursado NO MESMO semestre

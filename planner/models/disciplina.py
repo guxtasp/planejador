@@ -5,7 +5,7 @@ from sqlalchemy import CheckConstraint, ForeignKey, Integer, String, UniqueConst
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..extensions import db
-from .enums import TipoDisciplina, TipoRequisito, check_enum
+from .enums import Periodicidade, TipoDisciplina, TipoRequisito, check_enum
 
 
 class Disciplina(db.Model):
@@ -15,6 +15,10 @@ class Disciplina(db.Model):
     __table_args__ = (
         UniqueConstraint("curso_id", "codigo", name="uq_disciplina_curso_codigo"),
         check_enum("tipo", TipoDisciplina, "tipo_valido"),
+        CheckConstraint(
+            "periodicidade IS NULL OR periodicidade IN ('sempre', 'impar', 'par')",
+            name="periodicidade_valida",
+        ),
         CheckConstraint("creditos IS NULL OR creditos >= 0", name="creditos_nao_negativos"),
         CheckConstraint("carga_h IS NULL OR carga_h >= 0", name="carga_h_nao_negativa"),
     )
@@ -30,6 +34,8 @@ class Disciplina(db.Model):
     periodo_sugerido: Mapped[int | None] = mapped_column(Integer)
     tipo: Mapped[str] = mapped_column(String(15), default=TipoDisciplina.OBRIGATORIA.value)
     cor: Mapped[str | None] = mapped_column(String(9))  # hex, ex.: "#3b82f6"
+    # sempre | impar | par; NULL = oferta desconhecida (ver `Periodicidade`).
+    periodicidade: Mapped[str | None] = mapped_column(String(6))
 
     curso: Mapped["Curso"] = relationship(back_populates="disciplinas")  # noqa: F821
     # Requisitos DESTA disciplina (o que ela exige). Há duas FKs para
