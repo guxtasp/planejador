@@ -21,7 +21,8 @@ def _gravar(previa):
     ids = {}
     for d in r["disciplinas.csv"]:
         disc = Disciplina(curso_id=curso.id, codigo=d.codigo, nome=d.nome, tipo=d.tipo, creditos=d.creditos,
-                          carga_h=d.carga_h, periodo_sugerido=d.periodo_sugerido, cor=d.cor)
+                          carga_h=d.carga_h, periodo_sugerido=d.periodo_sugerido, cor=d.cor,
+                          periodicidade=d.periodicidade)
         db.session.add(disc)
         db.session.flush()
         ids[d.codigo] = disc.id

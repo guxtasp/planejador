@@ -60,6 +60,11 @@ details{margin-top:12px}summary{cursor:pointer;font-size:14px}
 table{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px}
 th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--border);vertical-align:top}
 .vazio{text-align:center;padding:18px;color:var(--text2)}
+.destino{border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin:0 0 12px;display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center}
+.destino legend{font-weight:600;padding:0 4px}
+.destino label{display:inline-flex;gap:6px;align-items:center;min-height:24px}
+.decisao{border:1px solid var(--yellow);background:color-mix(in srgb,var(--yellow) 12%,var(--bg2));border-radius:8px;padding:12px 14px;margin:0 0 12px}
+.decisao .row{margin-top:8px}
 
 /* Sucesso */
 .sucesso{text-align:center}
@@ -125,6 +130,12 @@ th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--border);vert
 <section class="passo" id="passo-3" aria-labelledby="t3">
   <div class="card">
     <h2 id="t3">Envie e confira a prévia</h2>
+    <fieldset class="destino" id="destino" hidden>
+      <legend>Para onde vão os dados?</legend>
+      <label><input type="radio" name="destino" value="atualizar"> Atualizar um curso meu</label>
+      <select id="destino-curso" aria-label="Curso a atualizar" disabled></select>
+      <label><input type="radio" name="destino" value="novo"> Criar curso novo</label>
+    </fieldset>
     <p>Escolha os arquivos .csv (pode ser mais de um). Os nomes aceitos são <b>curso.csv</b>, <b>disciplinas.csv</b>, <b>requisitos.csv</b> e <b>turmas.csv</b>.</p>
     <div class="row">
       <input type="file" id="arquivos" multiple accept=".csv,text/csv" aria-label="Arquivos CSV">
@@ -143,7 +154,9 @@ th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--border);vert
 <section class="passo" id="passo-4" aria-labelledby="t4">
   <div class="card">
     <h2 id="t4">Confira antes de confirmar</h2>
+    <div class="decisao" id="decisao" role="alert" hidden></div>
     <p class="resumo" id="resumo"></p>
+    <p class="hint" id="nota-curso"></p>
     <div class="totais" id="totais"></div>
     <p class="hint" id="aviso-bloqueio" style="margin-top:10px"></p>
     <div class="row fim"><button class="sec" id="voltar-envio">Escolher outros arquivos</button><button id="confirmar" disabled>Confirmar e salvar</button></div>
@@ -187,11 +200,48 @@ function ir(n) {
 document.querySelectorAll('[data-ir]').forEach(b => b.onclick = () => ir(Number(b.dataset.ir)));
 
 function mensagem(texto, cls) { const m = $('msg'); m.textContent = texto; m.className = cls || ''; }
+// Destino: "atualizar" (curso_id), "novo" (criar_novo) ou "auto" (o servidor procura um curso parecido e pergunta).
+const DEST = { modo: 'auto', cursoId: null };
 function formData() {
   const fd = new FormData();
   for (const f of $('arquivos').files) fd.append(f.name, f, f.name);
   fd.append('visibilidade', $('visibilidade').value);
+  if (DEST.modo === 'atualizar' && DEST.cursoId) fd.append('curso_id', DEST.cursoId);
+  if (DEST.modo === 'novo') fd.append('criar_novo', '1');
   return fd;
+}
+function escolherDestino(modo, cursoId) {
+  DEST.modo = modo; DEST.cursoId = cursoId ?? null;
+  document.querySelectorAll('input[name=destino]').forEach(r => { r.checked = r.value === modo; });
+  $('destino-curso').disabled = modo !== 'atualizar';
+  if (cursoId) $('destino-curso').value = cursoId;
+}
+async function carregarDestinos() {
+  try {
+    const j = await (await fetch('/api/cursos')).json();
+    const meus = (j.cursos || []).filter(c => c.meu);
+    if (!meus.length) return;                       // sem cursos: tudo é curso novo, nada a perguntar
+    $('destino-curso').replaceChildren(...meus.map(c => { const o = el('option', '', c.nome); o.value = c.id; return o; }));
+    $('destino').hidden = false;
+    const pedido = Number(new URLSearchParams(location.search).get('curso'));
+    if (meus.some(c => c.id === pedido)) escolherDestino('atualizar', pedido);
+  } catch { /* sem a lista, o servidor ainda pergunta se achar curso parecido */ }
+}
+document.querySelectorAll('input[name=destino]').forEach(r => r.onchange = () =>
+  escolherDestino(r.value, r.value === 'atualizar' ? Number($('destino-curso').value) : null));
+$('destino-curso').onchange = () => escolherDestino('atualizar', Number($('destino-curso').value));
+
+// Prévia achou curso parecido e ninguém escolheu: pergunta aqui (nunca junta nem cria em silêncio).
+function mostrarDestino(d) {
+  const box = $('decisao');
+  $('nota-curso').textContent = d?.nota_curso || '';
+  if (!d || !d.decisao_necessaria) { box.hidden = true; box.replaceChildren(); return; }
+  const linha = el('div', 'row');
+  d.candidatos.forEach(c => { const b = el('button', '', `Atualizar “${c.nome}”`); b.onclick = () => { escolherDestino('atualizar', c.curso_id); $('validar').click(); }; linha.append(b); });
+  const novo = el('button', 'sec', 'Criar curso novo'); novo.onclick = () => { escolherDestino('novo'); $('validar').click(); };
+  linha.append(novo);
+  box.replaceChildren(el('b', '', d.mensagem), linha);
+  box.hidden = false;
 }
 // A API devolve JSON, mas um erro de servidor pode devolver HTML: não deixar a tela muda.
 async function lerJson(r) { try { return await r.json(); } catch { return {}; } }
@@ -319,7 +369,7 @@ $('validar').onclick = async () => {
     if (sessaoExpirou(r)) return;
     const j = await lerJson(r);
     if (!r.ok) return mensagem(j.erro || 'Não foi possível conferir os arquivos. Tente de novo.', 'erro');
-    mensagem(''); mostrarPrevia(j.previa);
+    mensagem(''); mostrarPrevia(j.previa); mostrarDestino(j.destino);
   } catch { mensagem('Sem conexão com o servidor. Verifique e tente de novo.', 'erro'); }
   finally { $('validar').disabled = false; }
 };
@@ -333,7 +383,8 @@ $('confirmar').onclick = async () => {
     const j = await lerJson(r);
     if (!r.ok) {
       $('aviso-bloqueio').textContent = j.erro || 'Não foi possível salvar. Nada foi gravado.';
-      if (j.detalhes) mostrarPrevia(j.detalhes);
+      if (j.detalhes?.destino) mostrarDestino(j.detalhes.destino);
+      else if (j.detalhes) mostrarPrevia(j.detalhes);
       return;
     }
     const lista = campo => LISTA(Object.entries(j.relatorio.por_arquivo)
@@ -349,6 +400,7 @@ $('mais').onclick = () => { $('arquivos').value = ''; mensagem(''); ir(1); };
 
 ir(1);
 carregarApoio();
+carregarDestinos();
 </script>
 </body>
 </html>

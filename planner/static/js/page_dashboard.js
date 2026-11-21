@@ -23,14 +23,33 @@ function primeirosPassos() {
     <div style="font-size:14px;font-weight:700;margin-bottom:10px">Sua rota</div>
     <ol class="passos-lista">${passos.map(p => `<li class="${p.feito ? 'feito' : p === proximo ? 'atual' : ''}">
       <div><b>${esc(p.titulo)}</b><div class="pl-txt">${esc(p.texto)}</div></div>
-      ${p === proximo ? `<button class="btn btn-primary btn-sm" onclick="irPara('${p.tela}')">${esc(p.botao)}</button>` : ''}
+      ${p === proximo ? `<span class="sim-inline"><button class="btn btn-primary btn-sm" onclick="irPara('${p.tela}')">${esc(p.botao)}</button>
+        ${p.tela === 'historico' ? '<button class="btn btn-ghost btn-sm" onclick="pularHistorico()">Pular</button>' : ''}</span>` : ''}
     </li>`).join('')}</ol>
   </div>`;
+}
+
+// Duas datas lado a lado: pelo ritmo do histórico e pelo plano (texto pronto do servidor).
+function cartaoFormatura(prev, pp) {
+  const cartao = pp?.cartao || {};
+  const plano = cartao.valor || null;
+  const link = pp?.plano ? `<a href="#" onclick="irPara('planner');return false">${esc(pp.plano.nome)} →</a>` : `<a href="#" onclick="irPara('planner');return false">Montar plano →</a>`;
+  return `<div class="stat-card">
+      <div class="stat-label">Formatura</div>
+      <div class="formatura-duas">
+        <div><div class="stat-sub">pelo seu ritmo (histórico)</div><div class="stat-value" style="font-size:20px">${esc(prev.valor)}</div><div class="stat-sub">${esc(prev.sub)}</div></div>
+        <div><div class="stat-sub">pelo seu plano</div><div class="stat-value" style="font-size:20px">${esc(plano || '–')}</div>${cartao.sub ? `<div class="stat-sub">${esc(cartao.sub)}</div>` : ''}<div class="stat-sub">${link}</div></div>
+      </div>
+    </div>`;
 }
 
 function dashboard() {
   const c = document.getElementById('content');
   const p = S.painel;
+  // o plano mudou desde a última carga: refaz só o painel e redesenha (a data "pelo plano" acompanha)
+  if (p && Planos.carregado() && S.painelAssinatura !== assinaturaPainel()) {
+    GET(urlPainel()).then(r => { if (r.ok) { S.painel = r; if (S.currentPage === 'dashboard') dashboard(); } });
+  }
   if (!p) {
     c.innerHTML = `<div class="empty">Não foi possível carregar seu painel.<br>
       <button class="btn btn-primary" onclick="navTo('dashboard',document.querySelector('.nav-item[data-page=dashboard]'))">Tentar de novo</button></div>`;
@@ -59,11 +78,7 @@ function dashboard() {
       <div class="stat-value">${pg.creditos_validos}</div>
       <div class="stat-sub">de ${valorOu(pg.creditos_exigidos)} exigidos</div>
     </div>
-    <div class="stat-card">
-      <div class="stat-label">Previsão de Formatura</div>
-      <div class="stat-value" style="font-size:22px">${esc(prev.valor)}</div>
-      <div class="stat-sub">${esc(prev.sub)}</div>
-    </div>
+    ${cartaoFormatura(prev, p.previsao_plano)}
     <div class="stat-card">
       <div class="stat-label">Disciplinas</div>
       <div class="stat-value">${p.resumo.disciplinas_concluidas}</div>
@@ -71,6 +86,8 @@ function dashboard() {
     </div>
   </div>
 
+  ${semHistorico ? `<div class="sim-nota" style="margin:-8px 0 12px">Sem histórico, a data "pelo seu ritmo" usa a média do curso. <a href="#" onclick="irPara('historico');return false">Informe o histórico</a> para vê-la pelo seu ritmo.</div>` : ''}
+  ${p.previsao_plano?.mensagem ? `<div class="sim-nota" style="margin:-8px 0 20px">${esc(p.previsao_plano.mensagem)}</div>` : ''}
   <div class="grid-2" style="margin-bottom:20px">
     ${blocoLista('Disciplinas Elegíveis', 'var(--green)', elegiveis, 'Nenhuma disciplina elegível no momento',
       d => ({dot: esc(d.cor), meta: `${esc(d.codigo)} · ${periodStr(d.periodo)} · ${credStr(d.creditos)}`, selo: '<span class="badge badge-green">Elegível</span>'}))}

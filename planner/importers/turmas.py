@@ -1,6 +1,7 @@
 """Importador de `turmas.csv`: a oferta de um período letivo (turmas + encontros)."""
 from __future__ import annotations
 
+from ..domain.componentes import normalizar_componente
 from .base import Esquema
 from .campos import LeitorLinha
 from .horarios import parse_horarios
@@ -15,15 +16,17 @@ class TurmaImporter(CsvImporter[TurmaCsv]):
     `codigo_turma` é obrigatório (identifica a opção; ex.: T1, T2, P1) e não é
     assumido. `local` (sala) é opcional e vale para todos os encontros da turma.
     Turma sem horários é aceita com aviso: não aparece no calendário.
+    `componente` (opcional): teorica | pratica quando o quadro separa teoria e prática (T1, P1, P2…):
+    a matrícula vira uma teórica + uma prática do mesmo período. Vazio = turma completa.
     """
 
     arquivo = "turmas.csv"
     esquema = Esquema(
         obrigatorias=("disciplina", "periodo_letivo", "codigo_turma"),
-        opcionais=("docente", "vagas", "horarios", "local"),
+        opcionais=("docente", "vagas", "horarios", "local", "componente"),
         aliases={"codigo": "disciplina", "codigo_disciplina": "disciplina", "turma": "codigo_turma",
                  "periodo": "periodo_letivo", "horario": "horarios", "professor": "docente",
-                 "sala": "local"},
+                 "sala": "local", "tipo_turma": "componente", "parte": "componente"},
     )
 
     def converter(self, leitor: LeitorLinha) -> TurmaCsv:
@@ -37,7 +40,17 @@ class TurmaImporter(CsvImporter[TurmaCsv]):
             vagas=leitor.inteiro("vagas"),
             encontros=encontros,
             local=leitor.texto("local", max_len=100),
+            componente=self._ler_componente(leitor),
         )
+
+    @staticmethod
+    def _ler_componente(leitor: LeitorLinha) -> str | None:
+        texto = leitor.bruto("componente")
+        try:
+            return normalizar_componente(texto)
+        except ValueError:
+            leitor.erro("componente", f"Componente “{texto}” desconhecido. Use teorica, pratica ou deixe vazio (turma completa).")
+            return None
 
     @staticmethod
     def _ler_encontros(leitor: LeitorLinha) -> tuple:

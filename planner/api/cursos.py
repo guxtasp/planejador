@@ -4,6 +4,8 @@ Rotas de cursos e do onboarding (Etapa 4A). Só traduzem HTTP ⇄ services.
   GET /api/cursos                         cursos que o visitante pode abrir (públicos + os seus)
   GET /api/cursos/<id>                    dados de um curso
   GET /api/cursos/<id>/disciplinas        curso + catálogo (disciplinas e requisitos)
+  POST /api/cursos/<id>/disciplinas       cria uma disciplina (só o dono)
+  PATCH /api/cursos/<id>/disciplinas/<d>  edita uma disciplina (só o dono)
   DELETE /api/cursos/<id>                 exclui o curso (só o dono) e tudo que depende dele
   GET /                                   onboarding: escolher curso ou trazer um novo
   GET /curso/<id>                         planejador do curso
@@ -13,6 +15,7 @@ from __future__ import annotations
 from flask import Blueprint, jsonify, redirect, render_template, request
 
 from ..services.cursos import CursoService
+from ..services.disciplinas import DisciplinaService
 from .errors import NotFoundError
 from .sessao import login_obrigatorio, usuario_atual, usuario_atual_id
 
@@ -40,6 +43,20 @@ def excluir(curso_id: int):
 @bp.get("/<int:curso_id>/disciplinas")
 def catalogo(curso_id: int):
     return jsonify({"ok": True, **CursoService().catalogo(curso_id, usuario_atual_id())})
+
+
+@bp.post("/<int:curso_id>/disciplinas")
+@login_obrigatorio
+def criar_disciplina(curso_id: int):
+    r = DisciplinaService().criar(curso_id, usuario_atual_id(), request.get_json(silent=True))
+    return jsonify({"ok": True, **r}), 201
+
+
+@bp.patch("/<int:curso_id>/disciplinas/<int:disciplina_id>")
+@login_obrigatorio
+def editar_disciplina(curso_id: int, disciplina_id: int):
+    return jsonify({"ok": True, **DisciplinaService().editar(curso_id, usuario_atual_id(), disciplina_id,
+                                                             request.get_json(silent=True))})
 
 
 @bp_pagina.get("/")

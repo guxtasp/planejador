@@ -18,6 +18,7 @@ from dataclasses import dataclass
 from typing import Mapping
 
 from ..api.errors import AppError
+from ..domain.componentes import id_combinado
 from ..domain.previsao import normalizar_periodo
 from ..domain.entidades import Encontro
 from .analise_json import (MAX_ITENS_POR_SEMESTRE, MAX_SEMESTRES, encontros_para_json,
@@ -32,6 +33,7 @@ class ItemEntrada:
     disciplina_id: int
     turma_id: int | None
     encontros_livres: tuple[Encontro, ...] = ()
+    turma_auto: bool = False            # escolhida pelo Rumo (pode ser trocada por ele)
 
 
 @dataclass(frozen=True)
@@ -102,6 +104,7 @@ def ler_plano(payload) -> PlanoEntrada:
                 _inteiro(item.get("disciplina_id"), f"Semestre {i}: disciplina_id"),
                 None if turma is None else _inteiro(turma, f"Semestre {i}: turma_id"),
                 ler_encontros_livres(item.get("encontros_livres"), f"Semestre {i}"),
+                bool(item.get("turma_auto")) and turma is not None,
             ))
         semestres.append(SemestreEntrada(rotulo, periodo, tuple(itens)))
     return PlanoEntrada(nome, tuple(semestres))
@@ -142,7 +145,12 @@ def validar_referencias(
 
 
 def _item_json(i) -> dict:
-    base = {"disciplina_id": i.disciplina_id, "turma_id": i.turma_id}
+    turma = i.turma_id
+    if turma is not None and getattr(i, "turma_pratica_id", None):
+        turma = id_combinado(turma, i.turma_pratica_id)   # a tela vê uma opção só (teórica + prática)
+    base = {"disciplina_id": i.disciplina_id, "turma_id": turma}
+    if getattr(i, "turma_auto", False):
+        base["turma_auto"] = True
     if getattr(i, "encontros_livres", None):   # só aparece quando existe: contrato anterior intacto
         base["encontros_livres"] = list(i.encontros_livres)
     return base

@@ -159,3 +159,87 @@ def montar_painel(
         semestres_restantes=n_semestres,
         previsao_formatura=previsao,
     )
+
+
+# ── formatura pelo PLANO (não só pelo ritmo do histórico) ─────────────────────
+SEM_DATA_CREDITOS = "creditos_nao_informados"     # o curso não informa os créditos obrigatórios exigidos
+SEM_DATA_OBRIGATORIAS = "obrigatorias_faltando"   # o plano não inclui todas as obrigatórias
+SEM_DATA_PLANO_VAZIO = "plano_vazio"
+SEM_DATA_PERIODO = "sem_periodo"                  # nenhum período letivo no plano nem no histórico
+
+
+@dataclass(frozen=True)
+class FormaturaPeloPlano:
+    periodo_fim: str | None                 # último período com disciplina no plano
+    formatura: str | None                   # o plano fecha o curso (obrigatórias E optativas)
+    so_obrigatorias: str | None             # o plano fecha as obrigatórias (data delas)
+    optativas_exigidas: int | None
+    optativas_cumpridas: int
+    optativas_planejadas: int
+    optativas_faltam: int | None            # None = o curso não informa as optativas exigidas
+    formatura_com_optativas: str | None     # encaixando as que faltam (teto respeitado)
+    faltam_obrigatorias: tuple[int, ...]
+    sem_data: str | None                    # por que não há data (SEM_DATA_*)
+
+
+def formatura_pelo_plano(
+    semestres: Sequence[tuple[str | None, Sequence[int]]],
+    disciplinas: Mapping[int, Disciplina],
+    concluidas: Iterable[int],
+    creditos_obrigatorios: int | None,
+    creditos_optativos_exigidos: int | None,
+    teto_creditos: int | None,
+    periodo_inicial: str | None,
+) -> FormaturaPeloPlano:
+    """
+    Quando o aluno forma SE seguir o plano. `semestres` = [(período letivo ou None, ids)]; semestre sem
+    período continua a sequência (ou começa em `periodo_inicial`, o seguinte ao histórico).
+
+    Optativas: exigidas − cumpridas (histórico) − planejadas. Se faltam, estima onde cabem nos
+    semestres do plano (teto respeitado, `otimizador.encaixar_optativas`) e quantos semestres a mais
+    pediriam. Sem créditos exigidos conhecidos, não há data (vazio = desconhecido).
+    """
+    from .otimizador import encaixar_optativas   # import tardio: o otimizador é pesado e só isto o usa
+
+    feitas = set(concluidas)
+    periodos: list[str | None] = []
+    anterior = None
+    for per, _ids in semestres:
+        p = normalizar_periodo(per) if per else None
+        if p is None:
+            p = (somar_periodos(anterior, 1) if anterior else periodo_inicial)
+        periodos.append(p)
+        anterior = p or anterior
+    planejadas = [{i for i in ids if i in disciplinas and i not in feitas} for _p, ids in semestres]
+    todas = set().union(*planejadas) if planejadas else set()
+    faltam_obrig = tuple(sorted(d.id for d in disciplinas.values()
+                                if d.tipo == "obrigatoria" and d.id not in feitas and d.id not in todas))
+    com_itens = [k for k, ids in enumerate(planejadas) if ids]
+    prog = calcular_progresso(disciplinas.values(), feitas, creditos_obrigatorios, creditos_optativos_exigidos)
+    cumpridas = prog.optativos_cumpridos
+    opt_plan = sum(disciplinas[i].creditos or 0 for i in todas if disciplinas[i].tipo != "obrigatoria")
+    faltam_opt = None if creditos_optativos_exigidos is None else max(0, creditos_optativos_exigidos - cumpridas - opt_plan)
+
+    vazio = FormaturaPeloPlano(None, None, None, creditos_optativos_exigidos, cumpridas, opt_plan, faltam_opt,
+                               None, faltam_obrig, None)
+    if not com_itens:
+        return FormaturaPeloPlano(**{**vazio.__dict__, "sem_data": SEM_DATA_PLANO_VAZIO})
+    ultimo = com_itens[-1]
+    fim = periodos[ultimo]
+    if fim is None:
+        return FormaturaPeloPlano(**{**vazio.__dict__, "sem_data": SEM_DATA_PERIODO})
+    base = {**vazio.__dict__, "periodo_fim": fim}
+    # mesma regra do progresso: sem o total informado, vale a soma das obrigatórias do catálogo
+    if prog.obrigatorios_exigidos is None:
+        return FormaturaPeloPlano(**{**base, "sem_data": SEM_DATA_CREDITOS})
+    if faltam_obrig:
+        return FormaturaPeloPlano(**{**base, "sem_data": SEM_DATA_OBRIGATORIAS})
+    com_opt = fim
+    if faltam_opt:
+        cargas = [sum(disciplinas[i].creditos_no_limite for i in ids) for ids in planejadas[:ultimo + 1]]
+        _extra, sobra = encaixar_optativas(cargas, teto_creditos, faltam_opt)
+        novos = (-(-sobra // teto_creditos) if teto_creditos else 1) if sobra else 0
+        com_opt = somar_periodos(fim, novos) if novos else fim
+    return FormaturaPeloPlano(**{**base, "so_obrigatorias": fim,
+                                 "formatura": fim if faltam_opt == 0 else None,
+                                 "formatura_com_optativas": com_opt if faltam_opt is not None else None})

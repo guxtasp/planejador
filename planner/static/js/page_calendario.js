@@ -6,6 +6,10 @@
 // ═══════════════════════════════════════════════════════
 function calendario() {
   const plano = Planos.atual();
+  // abre já no 1º semestre com disciplinas (antes abria vazio, pedindo para escolher)
+  if (plano && !semestreDoCalendario(S.calendarSemId)) {
+    S.calendarSemId = (plano.semestres.find(s => s.itens.length) || plano.semestres[0])?.id ?? null;
+  }
   const semOpts = plano ? plano.semestres.map(s =>
     `<option value="${s.id}" ${s.id===S.calendarSemId?'selected':''}>${esc(s.rotulo)}${s.periodo_letivo ? ' · ' + esc(s.periodo_letivo) : ''}</option>`
   ).join('') : '';
@@ -13,8 +17,8 @@ function calendario() {
   const c = document.getElementById('content');
   c.innerHTML = `
   <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
-    <span style="font-size:13px;color:var(--text2)">Visualizar semestre:</span>
-    <select class="form-select" style="width:240px" onchange="calendarSemChange(+this.value)">
+    <label for="cal-semestre" style="font-size:13px;color:var(--text2)">Semestre</label>
+    <select class="form-select" id="cal-semestre" style="width:240px" onchange="calendarSemChange(+this.value)">
       <option value="0">-- Selecione --</option>
       ${semOpts}
     </select>
@@ -39,17 +43,22 @@ function semestreDoCalendario(semId) {
 }
 
 // Eventos = encontros da turma escolhida de cada disciplina do semestre.
-function eventosDoSemestre(sem, conflitantes) {
+// Semestre futuro sem quadro: entra a turma PROJETADA pelo servidor (último quadro de mesma paridade),
+// desenhada tracejada e marcada "estimado" — melhor que uma semana vazia.
+function eventosDoSemestre(sem, conflitantes, marcas = {}) {
   const eventos = [];
   sem.itens.forEach(item => {
     const d = S.disciplinas.find(x => x.id === item.disciplina_id);
     const livres = encontrosLivresDe(item);
+    const projetada = marcas[item.disciplina_id]?.turma_projetada;
     // Horários próprios (definidos pelo aluno) valem no lugar da turma do quadro.
     const turma = livres.length ? {codigo_turma: 'próprio', encontros: livres, propria: true}
-      : item.turma_id ? S.turmas.find(t => t.id === item.turma_id) : null;
+      : item.turma_id ? S.turmas.find(t => t.id === item.turma_id)
+      : projetada ? (t => t && {...t, estimada: true})(S.turmas.find(t => t.id === projetada)) : null;
     if (!d || !turma) return;
     turma.encontros.forEach(e => eventos.push({
       ...e, disciplina: d, turma, conflito: conflitantes.has(d.id),
+      bloqueio: (S.preferencias?.indisponiveis || []).some(b => b.dia === e.dia && e.inicio < b.fim && e.fim > b.inicio),
     }));
   });
   return eventos;
@@ -94,13 +103,15 @@ function renderCalendar(semId) {
     return `<div class="empty" style="padding:60px">${TEXTO_VAZIO_CALENDARIO}<div style="font-weight:600;color:var(--text);margin-bottom:4px">Escolha um semestre</div>O calendário mostra a semana de um semestre do seu plano. Se ainda não há semestres, crie-os em Planejamento.</div>`;
   }
 
-  // Só conflito CONFIRMADO (turmas já escolhidas) é pintado de vermelho.
+  // Mesma regra do Planejamento e do Simulador: as marcas vêm prontas do servidor.
   const analise = analiseDoSemestre(semId);
-  const conflitantes = new Set();
-  (analise?.conflitos || []).filter(c => c.tipo === 'conflito').forEach(c => { conflitantes.add(c.a.id); conflitantes.add(c.b.id); });
+  const marcas = analise?.marcas || {};
+  const conflitantes = new Set(Object.entries(marcas).filter(([, m]) => m.choques?.length).map(([id]) => Number(id)));
 
-  const eventos = eventosDoSemestre(sem, conflitantes);
+  const eventos = eventosDoSemestre(sem, conflitantes, marcas);
+  const estimadas = eventos.some(e => e.turma.estimada);
   const grade = gradeDoCalendario(eventos);
+  if (window.matchMedia('(max-width:640px)').matches) return calendarioEmLista(sem, eventos, grade, marcas, estimadas);
   const horas = [];
   for (let h = grade.hora_inicio; h < grade.hora_fim; h++) horas.push(h);
 
@@ -111,7 +122,11 @@ function renderCalendar(semId) {
   const totalH = horas.length * alturaHora;
   const colunas = `56px repeat(${grade.dias.length},minmax(110px,1fr))`;
 
-  let html = `<div style="overflow-x:auto"><div style="min-width:${56 + grade.dias.length * 110}px">
+  const choquesTexto = analise?.choques_texto
+    ? `<div class="sim-nota erro" style="margin:0 0 10px">⛔ ${esc(analise.choques_texto)} neste semestre: veja os blocos com contorno vermelho.</div>` : '';
+  const notaEstimada = estimadas ? `<div class="sim-nota" style="margin:0 0 10px">As turmas de ${esc(sem.periodo_letivo || 'este período')} ainda não saíram:
+    os blocos tracejados repetem o último quadro de mesma paridade (estimativa, pode mudar).</div>` : '';
+  let html = `${choquesTexto}${notaEstimada}<div style="overflow-x:auto"><div style="min-width:${56 + grade.dias.length * 110}px">
   <div style="display:grid;grid-template-columns:${colunas};border-bottom:1px solid var(--border)">
     <div class="cal-header cal-cell"></div>
     ${grade.dias.map(d=>`<div class="cal-header cal-cell" style="padding:12px 8px">${diaFull[d] || d}</div>`).join('')}
@@ -130,6 +145,13 @@ function renderCalendar(semId) {
     horas.forEach((h, i) => {
       html += `<div style="position:absolute;top:${i*alturaHora}px;left:0;right:0;border-top:1px solid var(--border);opacity:.3;pointer-events:none"></div>`;
     });
+    // blocos em que a pessoa não pode (preferências guardadas): faixa hachurada, atrás das aulas
+    (S.preferencias?.indisponiveis || []).filter(b => b.dia === dia).forEach(b => {
+      const ini = Math.max(minutos(b.inicio), grade.hora_inicio * 60), fim = Math.min(minutos(b.fim), grade.hora_fim * 60);
+      if (fim <= ini) return;
+      html += `<div class="cal-indisponivel" style="top:${(ini - grade.hora_inicio * 60) * porMinuto}px;height:${(fim - ini) * porMinuto}px"
+        title="Indisponível${b.motivo ? ': ' + esc(b.motivo) : ''}"><span>${esc(b.motivo || 'indisponível')}</span></div>`;
+    });
     const doDia = eventos.filter(ev => ev.dia === dia);
     const colunasDoDia = distribuirColunas(doDia, minutos);
     doDia.forEach(ev => {
@@ -140,13 +162,16 @@ function renderCalendar(semId) {
       const h = (minutos(ev.fim) - minutos(ev.inicio)) * porMinuto;
       html += `<div style="position:absolute;top:${top+2}px;left:calc(${col*larg}% + 2px);width:calc(${larg}% - 4px);height:${h-4}px;box-sizing:border-box;
         background:rgba(${hexToRgb(d.cor)},.18);border:1px solid ${esc(d.cor)};border-left:4px solid ${esc(d.cor)};
-        border-radius:5px;padding:3px 5px;cursor:pointer;
+        border-radius:5px;padding:3px 5px;cursor:pointer;${ev.turma.estimada ? 'border-style:dashed;opacity:.85;' : ''}
         ${ev.conflito?'outline:2px solid var(--red);outline-offset:-2px':''}
-        overflow:hidden" onclick="${ev.turma.propria ? `editarHorarios(${sem.id},${d.id})` : `showDiscDetail(${d.id})`}" title="${esc(d.nome)} — turma ${esc(ev.turma.codigo_turma)} (${ev.inicio}–${ev.fim})">
-        <div style="font-size:10px;font-weight:700;color:var(--text)">${esc(d.codigo)} · ${esc(ev.turma.codigo_turma)}</div>
+        overflow:hidden" onclick="${ev.turma.propria ? `editarHorarios(${sem.id},${d.id})` : `showDiscDetail(${d.id})`}" title="${esc(d.nome)} — turma ${esc(ev.turma.codigo_turma)} (${ev.inicio}–${ev.fim})${ev.turma.estimada ? ' · horário estimado pelo quadro de ' + esc(ev.turma.periodo_letivo || '') : ''}">
+        <div style="font-size:10px;font-weight:700;color:var(--text)">${esc(d.codigo)} · ${ev.turma.estimada ? 'estimado' : esc(parteDoEncontro(ev))}</div>
+        ${abreEm(ofertaDe(d), sem.periodo_letivo) ? '' : `<div class="cal-selo">${seloOferta(d, sem.periodo_letivo)}</div>`}
         <div style="font-size:9px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(d.nome)}</div>
         ${ev.local ? `<div style="font-size:9px;color:var(--text2)">${esc(ev.local)}</div>` : ''}
-        ${ev.conflito ? '<div style="font-size:9px;color:var(--red)">⚠️ Conflito</div>' : ''}
+        ${ev.conflito ? `<div style="font-size:9px;color:var(--red-ink);font-weight:700">⚠️ ${esc((marcas[d.id]?.choques || [])[0]?.texto || 'Choque')}</div>` : ''}
+        ${ev.bloqueio ? '<div style="font-size:9px;color:var(--red-ink);font-weight:700">⛔ Bate com sua disponibilidade</div>' : ''}
+        ${(marcas[d.id]?.tags || []).filter(t => t.tipo === 'junto').map(t => `<div style="font-size:9px;color:var(--accent);font-weight:600">${esc(t.texto)}</div>`).join('')}
       </div>`;
     });
     html += `</div>`;
@@ -163,13 +188,13 @@ function renderPendentesCalendario(semId) {
   if (!sem.itens.length) return `<p style="margin-top:12px;font-size:12px;color:var(--text3)"><button class="btn btn-primary btn-sm" onclick="irPara('planner')">+ Adicionar disciplinas</button></p>`;
 
   const fora = sem.itens.map(i => ({i, d: S.disciplinas.find(x => x.id === i.disciplina_id)}))
-    .filter(({i, d}) => d && !i.turma_id && !encontrosLivresDe(i).length)
+    .filter(({i, d}) => d && !i.turma_id && !encontrosLivresDe(i).length && !analiseDoSemestre(semId)?.marcas?.[d.id]?.turma_projetada)
     .map(({d}) => {
       const tem = turmasDaDisciplina(d.id, sem.periodo_letivo).length;
       const motivo = !tem ? 'sem horário definido'
         : !sem.periodo_letivo ? 'sem horário (escolha o período letivo ou defina os seus)'
         : 'sem horário (escolha a turma ou defina os seus)';
-      return `<li><strong>${esc(d.codigo)}</strong> ${esc(d.nome)} — <span style="color:var(--text3)">${esc(motivo)}</span>
+      return `<li><strong>${esc(d.codigo)}</strong> ${esc(d.nome)} ${seloOferta(d, sem.periodo_letivo)} — <span style="color:var(--text3)">${esc(motivo)}</span>
         · <a href="#" onclick="editarHorarios(${sem.id},${d.id});return false">definir horários</a></li>`;
     });
   if (!fora.length) return '';
@@ -178,4 +203,33 @@ function renderPendentesCalendario(semId) {
     <ul style="font-size:12px;color:var(--text2);padding-left:18px;line-height:1.7">${fora.join('')}</ul>
     <a href="#" style="font-size:12px" onclick="irPara('planner');return false">Escolher turmas no Planejamento →</a>
   </div>`;
+}
+
+
+// Celular: a semana vira uma lista por dia (sem rolagem lateral; quinta e sexta não somem da tela).
+function calendarioEmLista(sem, eventos, grade, marcas, estimadas) {
+  const nomes = {SEG: 'Segunda', TER: 'Terça', QUA: 'Quarta', QUI: 'Quinta', SEX: 'Sexta', SAB: 'Sábado', DOM: 'Domingo'};
+  const analise = analiseDoSemestre(sem.id);
+  const topo = `${analise?.choques_texto ? `<div class="sim-nota erro">⛔ ${esc(analise.choques_texto)} neste semestre.</div>` : ''}
+    ${estimadas ? `<div class="sim-nota">Turmas de ${esc(sem.periodo_letivo || 'este período')} ainda não saíram: os itens tracejados são estimativa.</div>` : ''}`;
+  const dias = grade.dias.map(dia => {
+    const doDia = eventos.filter(e => e.dia === dia).sort((a, b) => a.inicio.localeCompare(b.inicio));
+    const bloqueios = (S.preferencias?.indisponiveis || []).filter(b => b.dia === dia);
+    return `<section><h3>${nomes[dia] || dia}${bloqueios.length ? ` <span class="badge badge-gray">${bloqueios.map(b => `${esc(b.motivo || 'indisponível')} ${b.inicio}–${b.fim}`).join(' · ')}</span>` : ''}</h3>
+      ${doDia.length ? `<ul>${doDia.map(ev => `<li class="${ev.turma.estimada ? 'estimada' : ''} ${ev.conflito ? 'conflito' : ''}" style="border-left-color:${esc(ev.disciplina.cor)}"
+          onclick="${ev.turma.propria ? `editarHorarios(${sem.id},${ev.disciplina.id})` : `showDiscDetail(${ev.disciplina.id})`}">
+          <span class="hora">${ev.inicio}–${ev.fim}</span>
+          <span><b>${esc(ev.disciplina.codigo)}</b> ${esc(ev.disciplina.nome)}${ev.turma.estimada ? ' <i>(estimado)</i>' : ''}
+            ${ev.local ? `<br><small>${esc(ev.local)}</small>` : ''}
+            ${ev.conflito ? `<br><span class="alerta">⚠ ${esc((marcas[ev.disciplina.id]?.choques || [])[0]?.texto || 'Choque')}</span>` : ''}
+            ${ev.bloqueio ? '<br><span class="alerta">⛔ Bate com sua disponibilidade</span>' : ''}</span></li>`).join('')}</ul>`
+        : '<div class="livre">Sem aula</div>'}</section>`;
+  }).join('');
+  return `${topo}<div class="cal-lista">${dias}</div>`;
+}
+
+// Turma "teórica + prática": cada bloco diz de qual parte é (T1 teórica, P2 prática).
+function parteDoEncontro(ev) {
+  const parte = ev.componente && (ev.turma.partes || []).find(p => p.componente === ev.componente);
+  return parte ? `${parte.codigo_turma} ${ev.componente === 'pratica' ? 'prática' : 'teórica'}` : ev.turma.codigo_turma;
 }

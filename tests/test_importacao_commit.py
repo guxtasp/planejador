@@ -37,10 +37,10 @@ def test_exemplo_de_cc_ponta_a_ponta(app):
 
 
 def test_segunda_importacao_nao_tem_o_que_gravar(app):
-    ImportacaoService().confirmar(ARQUIVOS)
+    rel = ImportacaoService().confirmar(ARQUIVOS)
     antes = contagens()
     with pytest.raises(AppError) as erro:
-        ImportacaoService().confirmar(ARQUIVOS)
+        ImportacaoService().confirmar(ARQUIVOS, curso_id=rel.curso_id)
     assert erro.value.status_code == 422 and "Nada a importar" in erro.value.message
     assert contagens() == antes
 
@@ -134,8 +134,8 @@ def test_turma_sem_horarios_no_arquivo_mantem_os_encontros_do_banco(app):
 
 
 def test_curso_csv_com_celula_vazia_nao_apaga_dado_do_curso(app):
-    ImportacaoService().confirmar({"curso.csv": "nome,ch_total,versao_matriz\nCurso Z,3000,2020\n"})
-    ImportacaoService().confirmar({"curso.csv": "nome,ch_total,versao_matriz\nCurso Z,,2024\n"})
+    rel = ImportacaoService().confirmar({"curso.csv": "nome,ch_total,versao_matriz\nCurso Z,3000,2020\n"})
+    ImportacaoService().confirmar({"curso.csv": "nome,ch_total,versao_matriz\nCurso Z,,2024\n"}, curso_id=rel.curso_id)
     curso = db.session.scalar(select(Curso))
     assert (curso.ch_total, curso.versao_matriz) == (3000, "2024")
 

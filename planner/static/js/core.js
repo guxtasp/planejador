@@ -47,6 +47,7 @@ async function api(method, path, body) {
 const GET  = p => api('GET', p);
 const POST = (p, b) => api('POST', p, b);
 const PUT  = (p, b) => api('PUT', p, b);
+const PATCH = (p, b) => api('PATCH', p, b);
 const DEL  = p => api('DELETE', p);
 
 // ═══════════════════════════════════════════════════════
@@ -57,9 +58,99 @@ function toast(msg, type='info', dur=3500) {
   el.className = `toast toast-${type}`;
   el.textContent = msg;
   el.addEventListener('click', () => el.remove());
+  el.dataset.criado = Date.now();
   document.getElementById('toast-area').appendChild(el);
   setTimeout(() => el.remove(), type === 'error' ? Math.max(dur, 6000) : dur);   // erro fica mais tempo
 }
+
+// Toast com uma ação (ex.: "Desfazer"), visível por ~8 s. O botão é focável e fecha o toast.
+function toastAcao(msg, rotulo, acao, dur = 8000) {
+  const el = document.createElement('div');
+  el.className = 'toast toast-info toast-acao';
+  el.setAttribute('role', 'status');
+  el.innerHTML = `<span>${esc(msg)}</span> <button class="btn btn-ghost btn-sm">${esc(rotulo)}</button>`;
+  el.querySelector('button').onclick = e => { e.stopPropagation(); el.remove(); acao(); };
+  document.getElementById('toast-area').appendChild(el);
+  setTimeout(() => el.remove(), dur);
+}
+
+// ── Erro junto ao campo (não só em toast): aria-invalid + aria-describedby + texto logo abaixo ──
+function erroNoCampo(id, msg) {
+  const el = document.getElementById(id);
+  if (!el) { toast(msg, 'error'); return; }
+  limparErroCampo(id);
+  el.setAttribute('aria-invalid', 'true');
+  el.setAttribute('aria-describedby', `${id}-erro`);
+  el.insertAdjacentHTML('afterend', `<div class="campo-erro" id="${id}-erro" role="alert">${esc(msg)}</div>`);
+  el.focus();
+}
+function limparErroCampo(id) {
+  const el = document.getElementById(id);
+  el?.removeAttribute('aria-invalid');
+  el?.removeAttribute('aria-describedby');
+  document.getElementById(`${id}-erro`)?.remove();
+}
+
+// ── Campo de período: lista dos próximos períodos + "Outro…" para digitar (prevenção de erro) ──
+// A lista parte do período seguinte ao histórico (ou do 1º do plano). Sem nenhum dos dois, parte do
+// período corrente do relógio da pessoa: é só uma lista para ESCOLHER; nada é assumido sem ela escolher.
+const PERIODO_VALIDO = /^\d{4}\s*[./-]\s*[12]$/;
+function proximoPeriodo(p) { const [a, n] = p.split('/').map(Number); return n === 1 ? `${a}/2` : `${a + 1}/1`; }
+// O próximo período em que dá para se matricular (o que está em andamento já passou da matrícula):
+// jan–fev → AAAA/1 · mar–jul → AAAA/2 · ago–dez → (AAAA+1)/1.
+function proximaMatricula(hoje = new Date()) {
+  const m = hoje.getMonth(), a = hoje.getFullYear();
+  return m < 2 ? `${a}/1` : m < 7 ? `${a}/2` : `${a + 1}/1`;
+}
+function periodosSugeridos(n = 8) {
+  const doHist = S.historico.map(h => h.periodo_letivo).filter(Boolean).sort((a, b) => a.localeCompare(b, 'pt', {numeric: true}));
+  const doPlano = Planos.atual()?.semestres.map(s => s.periodo_letivo).find(Boolean);
+  let p = doHist.length ? proximoPeriodo(doHist[doHist.length - 1]) : (doPlano || proximaMatricula());
+  const lista = [];
+  for (let i = 0; i < n; i++) { lista.push(p); p = proximoPeriodo(p); }
+  return lista;
+}
+function campoPeriodo(id, valor, {auto = true, desativado = false, aoMudar = ''} = {}) {
+  const opcoes = periodosSugeridos();
+  const outro = valor && !opcoes.includes(valor);
+  return `<select class="form-select" id="${id}" ${desativado ? 'disabled' : ''}
+      onchange="document.getElementById('${id}-outro').hidden = this.value !== 'outro'; limparErroCampo('${id}'); ${aoMudar}">
+      ${auto ? `<option value="" ${!valor ? 'selected' : ''}>Automático</option>` : `<option value="" disabled ${!valor ? 'selected' : ''}>Escolha…</option>`}
+      ${opcoes.map(p => `<option ${p === valor ? 'selected' : ''}>${p}</option>`).join('')}
+      <option value="outro" ${outro ? 'selected' : ''}>Outro…</option>
+    </select>
+    <input class="form-input campo-outro" id="${id}-outro" ${outro ? '' : 'hidden'} placeholder="AAAA/N" maxlength="7" inputmode="numeric"
+      aria-label="Digite o período (AAAA/N)" value="${outro ? esc(valor) : ''}" onkeydown="if(event.key==='Enter'){${aoMudar}}" onchange="${aoMudar}"/>`;
+}
+// Valor escolhido; null = inválido (o erro já aparece junto ao campo).
+function valorPeriodo(id) {
+  const sel = document.getElementById(id);
+  if (!sel) return '';
+  if (sel.value !== 'outro') return sel.value;
+  const v = document.getElementById(`${id}-outro`).value.trim();
+  if (!PERIODO_VALIDO.test(v)) { erroNoCampo(`${id}-outro`, 'Use AAAA/N, por exemplo 2027/1.'); return null; }
+  limparErroCampo(`${id}-outro`);
+  return v.replace(/\s*[.-]\s*/, '/').replace(/\s+/g, '');
+}
+
+// ── Linha de metrô: a cadeia crítica como estações (o curso é uma linha; a formatura, o terminal) ──
+function linhaDeMetro(estacoes, rotulo) {
+  if (!estacoes?.length) return '';
+  return `<ol class="metro" aria-label="${esc(rotulo)}">${estacoes.map((e, k) => `<li class="${k === estacoes.length - 1 ? 'terminal' : ''}">
+    <span class="metro-ponto" aria-hidden="true"></span><b title="${esc(e.nome || '')}">${esc(e.codigo)}</b><small>${esc(e.periodo || '')}</small></li>`).join('')}</ol>`;
+}
+
+// Grava as preferências do aluno (junta o que mudou ao que já está guardado). Devolve true se deu certo.
+async function salvarPreferencias(parcial) {
+  const r = await PUT(`/api/cursos/${CURSO_ID}/preferencias`, {...(S.preferencias || {}), ...parcial});
+  if (!r.ok) { toast(r.erro || 'Não foi possível guardar as preferências.', 'error'); return false; }
+  S.preferencias = r.preferencias;
+  // grupo "cursar junto" impossível: avisado na hora, com o motivo (o resto segue valendo)
+  (r.avisos_juntas || []).forEach(a => toast(a, 'warn', 9000));
+  return true;
+}
+// Grupos "cursar junto" de uma disciplina (as outras do grupo).
+const grupoDe = id => (S.preferencias?.juntas || []).find(g => g.disciplinas.includes(id)) || null;
 
 // ═══════════════════════════════════════════════════════
 // MODAL
@@ -79,6 +170,10 @@ function closeModal() {
 // ═══════════════════════════════════════════════════════
 async function navTo(page, el) {
   S.currentPage = page;
+  // aviso simples de outra tela não acompanha a pessoa (os de "Desfazer" e de erro ficam)
+  document.querySelectorAll('#toast-area .toast:not(.toast-acao):not(.toast-error)').forEach(t => {
+    if (Date.now() - Number(t.dataset.criado || 0) > 1200) t.remove();
+  });
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   if (el) el.classList.add('active');
   document.querySelectorAll('.nav-item').forEach(n => n.removeAttribute('aria-current'));
@@ -114,7 +209,7 @@ async function loadData() {
     carregandoTudo = carregandoTudo || carregarTudo().finally(() => { carregandoTudo = null; });
     await carregandoTudo;
   }
-  if (S.curso && ['planner', 'calendario'].includes(S.currentPage)) await analisarPlano();
+  if (S.curso && ['planner', 'calendario', 'dashboard'].includes(S.currentPage)) await analisarPlano();
 }
 
 async function carregarTudo() {
@@ -125,6 +220,7 @@ async function carregarTudo() {
     planosJaCarregados ? true : Planos.carregar(),
     carregarAluno(),
   ]);
+  S.preferencias = (await GET(`/api/cursos/${CURSO_ID}/preferencias`).catch(() => null))?.preferencias || {};
   if (!resp.ok) {
     toast(resp.erro || 'Não foi possível carregar o curso.', 'error');
     return;                       // S.curso continua nulo: a próxima tentativa recarrega
@@ -135,6 +231,7 @@ async function carregarTudo() {
     S.grade = oferta.grade;
   }
   S.disciplinas = resp.disciplinas.map(adaptarDisciplina);
+  S.podeEditarCatalogo = !!resp.pode_editar_catalogo;
   document.getElementById('curso-ativo-nome').textContent = resp.curso.nome;
   document.title = `${resp.curso.nome} · Rumo`;
 
@@ -144,11 +241,29 @@ async function carregarTudo() {
   S.curso = resp.curso;           // por último: marca "carregado"
 }
 
+// O painel calcula a formatura "pelo seu plano" com o plano aberto (ou o mais recente, se nenhum).
+const assinaturaPainel = () => JSON.stringify([Planos.carregado() ? Planos.atualId() : null, Planos.carregado() && Planos.atual() ? Planos.paraAnalise() : null]);
+function urlPainel() {
+  const id = Planos.carregado() ? Planos.atualId() : null;
+  S.painelAssinatura = assinaturaPainel();
+  return `/api/cursos/${CURSO_ID}/painel${id ? `?plano_id=${id}` : ''}`;
+}
+
+// Depois de editar/criar uma disciplina: relê o catálogo (códigos dos requisitos mudam em outras
+// disciplinas) e o painel (situação e progresso dependem do catálogo).
+async function recarregarCatalogo() {
+  const resp = await GET(`/api/cursos/${CURSO_ID}/disciplinas`);
+  if (!resp.ok) return toast(resp.erro || 'Não foi possível recarregar as disciplinas.', 'error');
+  S.disciplinas = resp.disciplinas.map(adaptarDisciplina);
+  await carregarAluno();
+  render();
+}
+
 // Histórico e painel do aluno (status, progresso, previsão). Rechamar depois de mudar o histórico.
 async function carregarAluno() {
   const [h, p] = await Promise.all([
     GET(`/api/cursos/${CURSO_ID}/historico`),
-    GET(`/api/cursos/${CURSO_ID}/painel`),
+    GET(urlPainel()),
   ]);
   if (!h.ok || !p.ok) toast(h.erro || p.erro || 'Não foi possível carregar seu histórico.', 'error');
   S.historico = h.ok ? h.historico : [];
@@ -173,11 +288,34 @@ function atualizarCaminho() {
 
 // Pede ao servidor o julgamento do plano atual (carga, requisitos, conflitos).
 // Em falha mantém a última análise: a tela segue utilizável, sem inventar problemas.
-async function analisarPlano() {
+async function analisarPlano(rodada = 0) {
   if (!Planos.atual()) { S.analise = []; return; }
   const r = await POST(`/api/cursos/${CURSO_ID}/plano/analisar`, Planos.paraAnalise());
-  if (r.ok) S.analise = r.semestres;
-  else toast(r.erro || 'Não foi possível analisar o plano.', 'error');
+  if (r.ok) {
+    S.analise = r.semestres;
+    // as turmas que o Rumo escolheu (ou ainda vazias) acompanham a melhor combinação; refaz a análise uma vez
+    if (rodada === 0 && aplicarTurmasAutomaticas()) await analisarPlano(1);
+  } else toast(r.erro || 'Não foi possível analisar o plano.', 'error');
+}
+
+// Turma automática: com quadro real no período, a disciplina sem turma (ou com turma escolhida pelo Rumo)
+// recebe a da melhor combinação do semestre — sem choque e respeitando a sua rotina. A turma que VOCÊ
+// escolhe fica fixa; "Automática" no seletor devolve a escolha ao Rumo. A regra é do servidor
+// (`marcas.turma_sugerida`); aqui só se aplica.
+function aplicarTurmasAutomaticas() {
+  const plano = Planos.atual();
+  if (!plano) return false;
+  const trocas = [];
+  plano.semestres.forEach((s, i) => {
+    const marcas = S.analise?.[i]?.marcas || {};
+    s.itens.forEach(it => {
+      if (it.encontros_livres?.length) return;
+      const sugerida = marcas[it.disciplina_id]?.turma_sugerida;
+      if (sugerida && (it.turma_id == null || it.turma_auto) && it.turma_id !== sugerida) trocas.push([s.id, it.disciplina_id, sugerida]);
+    });
+  });
+  if (trocas.length) Planos.definirTurmasAuto(trocas);
+  return trocas.length > 0;
 }
 
 // Turmas ofertadas de uma disciplina (opcionalmente só as de um período).
@@ -193,21 +331,43 @@ function turmasDaDisciplina(discId, periodo) {
 // ═══════════════════════════════════════════════════════
 const planoComItens = () => S.planos.some(p => p.semestres.some(s => s.itens.length));
 const ROTA = [
-  {tela: 'historico', titulo: 'Informe o que você já cursou', botao: 'Abrir histórico',
-   texto: 'Sem o histórico, nenhuma disciplina aparece como concluída e o progresso fica em zero.',
+  {tela: 'historico', titulo: 'Informe o que você já cursou (opcional)', botao: 'Abrir histórico',
+   texto: 'Opcional: libera pré-requisitos já cumpridos e a previsão pelo seu ritmo. Dá para pular.',
+   pular: () => historicoPulado(), podePular: true,
    feito: () => S.historico.length > 0},
-  {tela: 'planner', titulo: 'Monte o plano dos próximos semestres', botao: 'Montar plano',
-   texto: 'Arraste as disciplinas que pretende cursar. O Rumo avisa de pré-requisito faltando e choque de horário.',
+  {tela: 'rotina', titulo: 'Conte sua rotina (opcional)', botao: 'Abrir minha rotina',
+   texto: 'Quando você não pode ter aula, seu ritmo e as optativas. Vale para o plano, a sugestão e o simulador.',
+   pular: () => rotinaPulada(), feito: () => rotinaPreenchida()},
+  {tela: 'planner', titulo: 'Monte o plano (ou peça uma sugestão)', botao: 'Abrir planejamento',
+   texto: 'Arraste disciplinas para os semestres ou use “Sugerir plano”. As turmas são escolhidas sozinhas; você pode trocar.',
    feito: planoComItens},
-  {tela: 'calendario', titulo: 'Escolha turmas e horários', botao: 'Ver minha semana',
-   texto: 'Veja o plano na semana e escolha a turma de cada disciplina sem bater horário.',
-   pular: () => !S.turmas.length,
-   feito: () => S.planos.some(p => p.semestres.some(s => s.itens.some(i => i.turma_id || i.encontros_livres?.length)))},
-  {tela: 'simulador', titulo: 'Teste o futuro no Simulador', botao: 'Abrir simulador',
-   texto: 'Veja a formatura prevista, os riscos de cada semestre e o que acontece se você reprovar.',
+  {tela: 'simulador', titulo: 'Teste o plano no Simulador', botao: 'Abrir simulador',
+   texto: 'Formatura prevista, riscos de cada semestre e o que acontece se você reprovar.',
    feito: () => typeof SIM !== 'undefined' && SIM.sim.estado === 'ok'},
 ];
 const passosDaRota = () => ROTA.filter(p => !(p.pular && p.pular()));
+// Rotina "feita" = há algo guardado além das respostas automáticas.
+function rotinaPreenchida() {
+  const p = S.preferencias || {};
+  return !!(p.indisponiveis?.length || p.turno || p.dias_livres?.length || p.max_pesadas || p.pesadas?.length
+    || Object.keys(p.teto_por_periodo || {}).length || p.periodos_pulados?.length || p.juntas?.length
+    || p.optativas_faltando != null || p.optativas_feitas?.length);
+}
+const chaveRotinaPulada = () => `rumo.rotina_pulada.${CURSO_ID}`;
+function rotinaPulada() { try { return localStorage.getItem(chaveRotinaPulada()) === '1'; } catch (e) { return false; } }
+window.pularRotina = () => {
+  try { localStorage.setItem(chaveRotinaPulada(), '1'); } catch (e) { /* só não lembra */ }
+  atualizarRota();
+  if (S.currentPage === 'dashboard') dashboard(); else render();
+};
+// "Pular o histórico" é conveniência deste navegador (o app funciona igual sem histórico).
+const chavePulo = () => `rumo.historico_pulado.${CURSO_ID}`;
+function historicoPulado() { try { return localStorage.getItem(chavePulo()) === '1'; } catch (e) { return false; } }
+window.pularHistorico = () => {
+  try { localStorage.setItem(chavePulo(), '1'); } catch (e) { /* sem storage: só não lembra */ }
+  atualizarRota();
+  if (S.currentPage === 'dashboard') dashboard(); else render();
+};
 
 // Marca ✓ no menu e mostra, no rodapé, o próximo passo (só fora da tela dele e fora do Painel, que já tem o cartão).
 function atualizarRota() {
@@ -234,28 +394,30 @@ function irPara(page) {
 
 // Uma frase por tela: o que ela mostra e o que fazer aqui. Aparece sob o título.
 const DICAS_DE_PAGINA = {
-  dashboard: 'Onde você está na rota: quanto já fez, o que pode cursar agora e o que está travado por pré-requisito.',
-  historico: 'Passo 1 de 4 · O que você já cursou. É daqui que o Rumo sabe o que está concluído e libera as próximas disciplinas.',
-  planner: 'Passo 2 de 4 · Arraste disciplinas da lista para os semestres. Cada semestre mostra créditos, choques de horário e pré-requisitos faltando.',
-  calendario: 'Passo 3 de 4 · A sua semana em horários, com as turmas do plano. Escolha o semestre e a turma de cada disciplina.',
-  simulador: 'Passo 4 de 4 · E se eu seguir este plano? Mostra os riscos semestre a semestre e a formatura prevista, e sugere um plano melhor.',
-  fluxograma: 'Mapa do curso por período. A cor de cada caixa diz se você já fez, está fazendo, pode fazer ou ainda está bloqueado. Clique para ver detalhes.',
-  disciplinas: 'Todas as disciplinas do curso: créditos, em que períodos são ofertadas (par, ímpar ou sempre) e pré-requisitos. Informar par/ímpar deixa o Simulador exato.',
+  dashboard: 'Onde você está e o que falta.',
+  historico: 'Passo 1 de 4 · opcional · o que você já cursou.',
+  rotina: 'Passo 2 de 4 · opcional · vale para o plano, a sugestão e o simulador.',
+  planner: 'Passo 3 de 4 · monte à mão ou peça uma sugestão.',
+  calendario: 'A semana do plano, semestre a semestre.',
+  simulador: 'Passo 4 de 4 · avalia o plano aberto no Planejamento.',
+  fluxograma: 'O curso por período. Clique numa disciplina.',
+  disciplinas: 'Créditos, oferta par/ímpar e pré-requisitos.',
 };
 
 function render() {
   const titles = {
     dashboard: 'Painel',
-    planner: 'Planejamento de Matrícula',
-    fluxograma: 'Fluxograma Curricular',
-    calendario: 'Calendário Semanal',
-    historico: 'Histórico Acadêmico',
-    disciplinas: 'Base de Disciplinas',
+    planner: 'Planejamento',      // iguais ao menu (consistência)
+    fluxograma: 'Fluxograma',
+    calendario: 'Calendário',
+    historico: 'Histórico',
+    rotina: 'Minha rotina',
+    disciplinas: 'Disciplinas',
     simulador: 'Simulador',
   };
   document.getElementById('page-title').textContent = titles[S.currentPage] || '';
   document.getElementById('page-hint').textContent = DICAS_DE_PAGINA[S.currentPage] || '';
-  const pages = { dashboard, planner, fluxograma, calendario, historico, disciplinas, simulador };
+  const pages = { dashboard, planner, fluxograma, calendario, historico, disciplinas, simulador, rotina };
   const fn = pages[S.currentPage];
   if (fn) fn();
   atualizarRota();
@@ -317,6 +479,35 @@ function periodicidadeBadge(p) {
   const x = PERIODICIDADE[p];
   return x ? `<span class="badge ${x.cls}" title="${esc(x.longo)}">${x.curto}</span>`
            : '<span class="badge" title="O curso não informou em quais períodos a disciplina é ofertada">Oferta não informada</span>';
+}
+
+// Selo de oferta ÚNICO (lista, cartão, calendário, simulador, fluxograma). A oferta efetiva vem do
+// servidor (`d.oferta`: valor + origem cadastrada/estimada/desconhecida). Com `periodo`, destaca quando
+// a disciplina não abre naquele período: vermelho se a oferta é cadastrada, amarelo se é estimada.
+function abreEm(oferta, periodo) {
+  if (!oferta || !periodo || oferta.valor === 'sempre') return true;
+  const n = Number(String(periodo).split('/')[1]);
+  return Number.isFinite(n) ? ((n % 2 === 1) === (oferta.valor === 'impar')) : true;
+}
+function ofertaDe(d) {
+  return d.oferta || {valor: d.periodicidade || 'sempre', origem: d.periodicidade ? 'cadastrada' : 'desconhecida'};
+}
+function seloOferta(d, periodo = null) {
+  const o = ofertaDe(d), est = o.origem === 'estimada';
+  if (periodo && o.origem !== 'desconhecida' && !abreEm(o, periodo)) {
+    return est
+      ? `<span class="badge badge-yellow selo-oferta" title="Estimada pelo período sugerido na matriz: pode não abrir em ${esc(periodo)}">⚠ Talvez não abra em ${esc(periodo)}</span>`
+      : `<span class="badge badge-red selo-oferta" title="${esc(PERIODICIDADE[o.valor].longo)}">✕ Não abre em ${esc(periodo)}</span>`;
+  }
+  if (o.origem === 'desconhecida') return '<span class="badge badge-gray selo-oferta" title="O curso não informou em quais períodos a disciplina é ofertada">Oferta ?</span>';
+  const x = PERIODICIDADE[o.valor];
+  return `<span class="badge ${x.cls} selo-oferta${est ? ' estimada' : ''}" title="${esc(x.longo)}${est ? ' — estimada pelo período sugerido' : ''}">${x.curto}${est ? ' (estimada)' : ''}</span>`;
+}
+
+// Tags prontas do servidor (choque, disponibilidade, sem horário, optativa): só desenha.
+const COR_TAG = {red: 'badge-red', yellow: 'badge-yellow', gray: 'badge-gray', accent: 'badge-accent'};
+function tagsProntas(tags) {
+  return (tags || []).map(t => `<span class="badge ${COR_TAG[t.cor] || 'badge-gray'} tag-${esc(t.tipo)}">${esc(t.texto)}</span>`).join(' ');
 }
 
 function periodStr(n) {

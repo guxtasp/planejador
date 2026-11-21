@@ -53,7 +53,7 @@ CABECALHOS = {
         "duracao_semestres", "dias_letivos",
     ],
     "disciplinas.csv": [
-        "codigo", "nome", "creditos", "carga_h", "periodo_sugerido", "tipo", "cor",
+        "codigo", "nome", "creditos", "carga_h", "periodo_sugerido", "tipo", "cor", "periodicidade",
     ],
     "requisitos.csv": ["disciplina", "requisito", "tipo", "grupo_alt"],
     "turmas.csv": [
@@ -110,7 +110,29 @@ def montar_curso() -> list[dict]:
     return [{"nome": "Ciência da Computação", "versao_matriz": "2023"}]
 
 
+# Revisão manual já gravada em examples/: estas disciplinas abrem TODO período, embora o seed só
+# traga horário de uma paridade. Fica aqui para o exportador não desfazer a revisão.
+PERIODICIDADE_REVISADA = {c: "sempre" for c in (
+    "ERU324", "INF280", "MAT135", "MAT140", "MAT147", "MAT241", "MAT271")}
+
+
+def _periodicidade_do(linha, com_horario: set[int]) -> str | None:
+    """
+    A mesma paridade das turmas exportadas: ímpar, par ou as duas (= "sempre").
+    Sem horário no seed não há turma, logo não há base para dizer quando abre: vazio.
+    """
+    if linha["codigo"] in PERIODICIDADE_REVISADA:
+        return PERIODICIDADE_REVISADA[linha["codigo"]]
+    if linha["id"] not in com_horario:
+        return None
+    periodos = _periodo_letivo_do(linha)
+    if len(periodos) > 1:
+        return "sempre"
+    return "impar" if periodos[0] == PERIODO_LETIVO_IMPAR else "par"
+
+
 def montar_disciplinas(tabelas) -> list[dict]:
+    com_horario = {h["disciplina_id"] for h in tabelas["horarios"]}
     return [
         {
             "codigo": d["codigo"],
@@ -121,6 +143,7 @@ def montar_disciplinas(tabelas) -> list[dict]:
             "periodo_sugerido": None if _eh_optativa(d) else d["periodo"],
             "tipo": "optativa" if _eh_optativa(d) else "obrigatoria",
             "cor": d["cor"],
+            "periodicidade": _periodicidade_do(d, com_horario),
         }
         for d in tabelas["disciplinas"]
     ]

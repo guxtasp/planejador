@@ -19,6 +19,7 @@ class Turma(db.Model):
             "disciplina_id", "periodo_letivo", "codigo_turma", name="uq_turma_oferta"
         ),
         CheckConstraint("vagas IS NULL OR vagas >= 0", name="vagas_nao_negativas"),
+        CheckConstraint("componente IS NULL OR componente IN ('teorica', 'pratica')", name="componente_valido"),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -27,6 +28,9 @@ class Turma(db.Model):
     )
     periodo_letivo: Mapped[str] = mapped_column(String(10))  # ex.: "2026/1"
     codigo_turma: Mapped[str] = mapped_column(String(20))    # ex.: "T1", "P2"
+    # NULL = turma completa (todos os encontros). "teorica"/"pratica" = parte da disciplina: a matrícula
+    # é uma teórica + uma prática do mesmo período (ver `domain.componentes`).
+    componente: Mapped[str | None] = mapped_column(String(10))
     docente: Mapped[str | None] = mapped_column(String(200))
     vagas: Mapped[int | None] = mapped_column()
 

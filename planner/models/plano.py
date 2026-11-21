@@ -1,7 +1,7 @@
 """Planos de curso do aluno: semestres e as disciplinas (turmas) escolhidas."""
 from __future__ import annotations
 
-from sqlalchemy import ForeignKey, JSON, String, UniqueConstraint
+from sqlalchemy import Boolean, ForeignKey, JSON, String, UniqueConstraint, false
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..extensions import db
@@ -71,10 +71,17 @@ class PlanoItem(db.Model):
         ForeignKey("turma.id", ondelete="SET NULL"), index=True
     )
 
+    # Disciplina com teórica e prática separadas: `turma_id` = a teórica, esta = a prática.
+    turma_pratica_id: Mapped[int | None] = mapped_column(ForeignKey("turma.id", ondelete="SET NULL"))
+
+    # True = a turma foi escolhida pelo Rumo (melhor combinação do semestre) e pode ser trocada por
+    # ele quando o semestre muda; False = o aluno escolheu (fica fixa).
+    turma_auto: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
+
     # Horários que o aluno definiu à mão: [{"dia","inicio","fim"}]. NULL = nenhum.
     # Excludente com `turma_id` (regra do serviço, ver `validar_referencias`).
     encontros_livres: Mapped[list[dict] | None] = mapped_column(JSON)
 
     semestre: Mapped["PlanoSemestre"] = relationship(back_populates="itens")
     disciplina: Mapped["Disciplina"] = relationship()  # noqa: F821
-    turma: Mapped["Turma | None"] = relationship()  # noqa: F821
+    turma: Mapped["Turma | None"] = relationship(foreign_keys=[turma_id])  # noqa: F821

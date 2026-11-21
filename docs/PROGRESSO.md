@@ -593,3 +593,333 @@ Baseline antes das peças: 637 testes passando.
 - **Exclusão de curso:** `DELETE /api/cursos/<id>` (só dono; 403 não dono, 404 inexistente/privado alheio, 409 se outra conta tem histórico). Apaga o histórico do dono antes (FK `RESTRICT`). Botão **Excluir** nos cartões da tela inicial (`/api/cursos` devolve `meu`).
 - **CSV de exemplo:** `disciplinas.csv` ganhou a coluna `periodicidade` (INF497 fica vazia: sem turma no quadro). Por isso a prévia do exemplo agora tem **1 aviso** (testes ajustados).
 - **Não executado por mim:** `pytest` completo e navegador (ambiente sem SQLAlchemy). Só rodei os testes novos de validação (sem banco) e a prévia do exemplo real.
+
+
+## Melhoria — FASE 1: otimização, grafos e metaheurísticas (`planner/domain/`) — ✅ concluída, 🛑 aguardando ok
+
+### Antes de começar: 17 testes vermelhos herdados (corrigidos)
+A rodada anterior ("periodicidade obrigatória…") não tinha rodado o `pytest`. Linha de base real: 681 ✅ / 17 ❌.
+- `api/__init__.py`: o blueprint `simulacao` **nunca era registrado** → todas as rotas do simulador/sugestão davam 404.
+- `services/cursos.py`: catálogo passa a devolver `pode_editar_oferta` (só o dono edita par/ímpar).
+- `tools/export_legacy_seed.py`: exporta `periodicidade` (paridade das turmas; sem turma = vazio) e preserva a
+  revisão manual já gravada (`PERIODICIDADE_REVISADA`: ERU324, INF280, MAT135, MAT140, MAT147, MAT241, MAT271 = "sempre").
+- Testes: `_gravar` de `test_previa_servico` não copiava `periodicidade`; o auxiliar `problemas()` de
+  `test_importers_validacao` passa a ignorar o aviso de periodicidade (tem teste próprio).
+
+### O que foi feito
+1. **Dívida técnica:** `_Modelo(nos, grafo, disciplinas, requisitos, …)` recebe os requisitos no construtor;
+   `requisitos_originais` e `_requisitos_de` foram removidos.
+2. **Grafos (`grafo.py`):**
+   - `alturas` (caminho mais longo até um sumidouro, pré = 1, co = 0) e `pesos_posicionais` (créditos do nó + descendentes).
+     O guloso ordena por (último semestre possível, −altura, −peso posicional, −créditos, sugerido, id) — estilo Hu/Coffman-Graham.
+     Há também um guloso "cheio até o teto"; fica o ponto de partida com menos violações.
+   - `cadeia_critica`: sequência explícita A → B → C que define o prazo. Sai em `ResultadoOtimizacao.cadeia_critica`,
+     em `CaminhoCritico.cadeia` (simulador) e no JSON (`cadeia_critica`/`critico.cadeia` + `cadeia_mensagem` pronta).
+   - Limites inferiores novos: `limite_energetico` (para todo (a, b): H ≥ a + b + ⌈créditos dos nós com primeiro ≥ a e
+     cauda ≥ b / teto⌉ — cabeças e caudas juntas) e `horizonte_por_janelas` (H fixo → janela [primeiro, último(H)] de cada nó;
+     toda janela tem de comportar os créditos presos nela, **inclusive por paridade**: condição de Hall sobre os semestres
+     em que cada nó é ofertado). Todos são limites válidos; vale o maior.
+3. **Recozimento simulado (`otimizador.py`):**
+   - `_Estado`: avaliação **incremental** — mover uma disciplina só recalcula oferta dela, carga dos 2 semestres, risco,
+     sugerido, colisões com os colegas dos 2 semestres (linha de colisão em cache) e os termos de requisito em que ela aparece.
+     Teste compara o delta com o cálculo completo em 1500 movimentos.
+   - Vizinhança: mover dentro da **janela** [mais cedo pelos requisitos, mais tarde pelos dependentes que só ela atende],
+     ofertado e com espaço; **cadeia** (move e empurra dependentes / puxa requisitos); **troca** entre semestres; com a
+     solução inviável, movimento de **reparo** (disciplina em violação → janela/semestre com espaço).
+   - T0 calibrada por amostra de pioras (aceitar a piora média com 50%); **reaquecimento** ao estagnar (volta ao melhor);
+     **3 reinícios** com sementes derivadas da semente do pedido; prazo `tempo_max_s` respeitado.
+   - Fase "menor nº de semestres": orçamento cheio, para na 1ª solução viável e o custo vira "nº de violações"
+     (macios só desempatam), para atravessar platôs.
+4. **Alocação de turmas (`alocacao.py` + novo `semana.py`):** custo = (colisões, penalidade) em ordem lexicográfica.
+   Penalidade por `PreferenciasSemana`: encontro em bloco indisponível, horas de janela, dias com aula, encontro fora do
+   turno, aula em dia que se quer livre (pesos configuráveis). A poda usa só a parte monótona (janelas entram na folha).
+   **Sem preferências o resultado é idêntico** (teste compara com o algoritmo antigo em 300 instâncias aleatórias).
+5. **Testes:** `test_otimizador.py` (+15), `test_alocacao_preferencias.py` (novo, 7), JSON da cadeia. Carregador do exemplo
+   sem banco em `tests/exemplo_cc.py`. Desempenho: exemplo de CC completo (teto 24) em **< 5 s** (roda em ~0,4 s).
+
+### Como medi (`python -m tools.medir_otimizador`)
+- **Velocidade:** uma corrida de recozimento, modo refino, teto 24, h = 9, mesma solução inicial, 6000 iterações.
+  Antes × depois intercalados na mesma sessão (o código antigo carregado do git), mediana de 5:
+  **12,6 mil → 39,5 mil iterações/s (≈ 3,1×)**. Pipeline completo: 0,7–1,2 s → 0,3–0,9 s, mesma qualidade
+  (mesmos semestres, 0 colisões, carga equivalente).
+- **Prova de ótimo** (10 cenários: tetos 18/16/14/12/10 × começando do zero / do meio do curso):
+  **5/10 → 8/10 com `otimo_comprovado`**. Ganharam prova: meio+teto 14 (LB 6→8), meio+teto 12 (7→8), meio+teto 10 (8→10).
+
+### Decisões / limites
+- Calibrar T0 para aceitar 80% das pioras deixou a busca quente demais (custo pior por iteração); 50% ficou equivalente à
+  temperatura fixa antiga. Mantido o orçamento padrão de 9000 iterações (24 mil não mudou o resultado).
+- **Teto 14 do zero** (138 créditos em 10 semestres = 2 de folga) é viável, mas a busca só acha às vezes: sai 11 semestres
+  "melhor encontrado" (limite 10). **Teto 10 do zero**: limite 14 = horizonte máximo e a busca não fecha → "sem solução".
+- A cadeia crítica vem dos "primeiros semestres possíveis" (sem teto de créditos): mostra a cadeia de requisitos/oferta;
+  quando o prazo é limitado por créditos, a frase de `explicar_sugestao` continua dizendo isso.
+- Preferências da semana ainda não chegam pela API (é a Fase 2); por ora só o domínio e os testes as usam.
+- `pytest`: **720 passaram**. Sem mudança de modelo (nenhuma migração).
+
+
+## Melhoria — FASE 2 + complementos (preocupações do aluno, importação sem duplicar, cursar junto) — ✅ concluída, 🛑 aguardando ok
+
+`pytest`: **803 passaram** (720 ao fim da Fase 1). `flask db check` limpo num SQLite novo (migração `e7a4b9c2d013`).
+⚠️ O Postgres do `.env` ainda NÃO recebeu a migração: rodar `flask --app planner db upgrade` (não foi feito por mim).
+
+### Fase 2 — simulação com as preocupações reais
+- **Preferências** (`domain/preferencias.py`, `domain/semana.py`): blocos indisponíveis, turno, dias livres, teto por
+  período, períodos trancados, máximo de "pesadas" (pesada = já reprovada no histórico ∪ marcada pelo aluno; nada
+  inventado). Validadas em `simulacao_json.ler_preferencias` com erro **por campo** (`detalhes.campo`).
+- **Prazo** (`domain/prazo.py`): regular (duração) e máximo (duração × fator, padrão 1,5). Sem duração ou sem ingresso,
+  nada é afirmado. Ingresso: informado › período mais antigo do histórico › início do plano se o histórico está vazio.
+  Trancamento não conta no prazo.
+- **Monte Carlo** (`domain/monte_carlo.py`): 500 execuções (semente fixa) de `replanejar` com reprovação sorteada a cada
+  tentativa (pode reprovar de novo). Taxa = histórico do aluno suavizada para 85% com 4 tentativas fictícias; disciplina
+  já reprovada × 0,8 (uma vez só — compor virava espiral). Devolve distribuição por período, P50/P80/P90, chance até o fim
+  do plano e sensibilidade (**atraso a mais** quando ela reprova vs. quando não; a média bruta enganava porque incluía as
+  outras reprovações).
+- **Semana** por semestre: horas em aula, dias livres (dias letivos do curso ou SEG–SEX), janelas, choques com indisponíveis.
+- **Otimizador** respeita: teto por período e trancamento (duros, capacidade por semestre e calendário sem o período);
+  turno, dias livres, pesadas e "todas as turmas caem no indisponível" (macios). Turma que bate no indisponível sai das
+  candidatas quando há outra (regra dura na alocação).
+
+### Complemento 1
+1. **Importar sem duplicar** (`domain/cursos_parecidos.py`): candidatos por nome normalizado (+ instituição) ou ≥ 60% dos
+   códigos, só do mesmo dono. A prévia compara com o mais parecido e exige a decisão; a confirmação sem `curso_id` nem
+   `criar_novo` dá **409** com os candidatos. `/importar` pergunta "Atualizar um curso meu / Criar curso novo" e mostra
+   "Parece o curso X (N disciplinas em comum)". Atualizar sem curso.csv não mexe no curso (a prévia diz).
+2. **Selo par/ímpar único** (`seloOferta` em core.js): a oferta efetiva (cadastrada/estimada/desconhecida) vem no catálogo;
+   cartão do semestre mostra "✕ Não abre em AAAA/N" (cadastrada) ou "⚠ Talvez não abra" (estimada) sem esperar a análise.
+   Mesmo selo na lista, cartão, calendário, simulador, sugestão, fluxograma e detalhe.
+3. **Formatura pelo plano no Painel** (`painel.formatura_pelo_plano`): duas datas, "pelo seu ritmo" e "pelo seu plano"
+   (o plano aberto ou o mais recente), com optativas (exigidas − cumpridas − planejadas, encaixadas com o teto).
+4. **Histórico opcional**: passo "(opcional)" com "Pular"; uma linha em cada tela diz o que melhora com ele. **Colar a
+   tabela** do sistema acadêmico (`importers/historico_colado.py`): reconhece pelo conteúdo (código, período, situação,
+   nota), prévia (reconhecidas / não encontradas / repetidas / não entendidas) e confirmação.
+5. **Preferências salvas** (modelo `preferencia_aluno` + migração; `GET/PUT /api/cursos/<id>/preferencias`), usadas por
+   Simulador, Sugestão, Planejamento e Calendário sem perguntar de novo. Planejamento/Calendário: "Não cabe na sua
+   disponibilidade", "A turma Tx cabe" (botão), "Sem horário — choque e disponibilidade não verificados"; o Calendário
+   desenha os blocos indisponíveis. **Optativas que cabem** (`domain/optativas.py`, botão em cada semestre): oferta,
+   requisitos e disponibilidade, ordenadas por encaixe; só "Adicionar" põe no plano.
+
+### Complemento 2
+- **Optativas no Simulador**: exigidas/cumpridas/planejadas/faltam, risco "Faltam N créditos", as duas datas e
+  "Cabem mais N créditos de optativa aqui" por semestre; optativa planejada passa por oferta, requisitos, choques e cenários.
+- **Choque visível no item** (`alocacao.choques_por_disciplina`, `analise_json.marcas_do_item`): "Choque com X (Seg 14–16)"
+  vermelho, "Possível choque" amarelo (horário projetado), "Bate com sua disponibilidade", "Sem horário — choque não
+  verificado"; contador "N choques" no topo do semestre leva ao item. Mesma regra e texto no Planejamento e no Calendário
+  (que agora também projetam o quadro de mesma paridade).
+
+### Complemento 3 — cursar junto
+- `domain/juntas.py`: candidatas (TCC/Monografia/Projeto Final × Seminário/Estágio no mesmo período sugerido, ou
+  correquisito mútuo; nunca regra automática) e problemas (ofertas só ímpar × só par; uma exige a outra, mesmo indiretamente).
+- Otimizador: grupo **obrigatório** vira bloco (oferta = interseção, requisitos = união, créditos = soma; turmas = combinações
+  das turmas dos membros no mesmo período). **Preferência** só custa quando separado. Grupo impossível é ignorado e avisado.
+- Simulador: "X e Y estão em semestres diferentes" → "Mova para o semestre N"; replanejamento: obrigatório entra completo
+  e reprovar em um adia o grupo; preferência não arrasta.
+- Tela: pergunta única no Simulador ("Sim, essas juntas / Escolher outras / Não, obrigado"), edição em Preferências,
+  "Cursar junto com…" no detalhe, tag "Junto com X" nos cartões, ao arrastar pergunta se leva a outra (com Desfazer em
+  toast de 8 s) e a sugestão diz "Para manter X e Y juntas, a formatura fica em AAAA/N".
+
+### Validação no navegador
+Playwright (instalado nesta rodada), exemplo de CC num SQLite temporário com login dev: Painel, Planejamento (+ optativas
+que cabem), Calendário, Histórico (+ colar), Simulador (+ preferências, sugestão, erro de campo) e /importar, em 1366 px e
+390 px, claro e escuro. Sem `pageerror`; o único erro de console é o 422 provocado de propósito pelo teste de erro de campo
+(que aparece junto ao campo, com `aria-invalid`/`aria-describedby`). Corrigidos durante a validação: selo "Sem horário"
+duplicado, linha de horário espremida, faixa de status espalhada, bloco de colar sumindo ao redesenhar, inconsistência
+"créditos exigidos" entre progresso e formatura pelo plano.
+
+### Limites conhecidos
+- Monte Carlo do exemplo de CC leva ~2–3 s (500 execuções); a tela mostra "Simulando…".
+- "Pular histórico" é lembrado só no navegador (conveniência; o app funciona igual sem histórico).
+- O contador de "pesadas" no otimizador conta um bloco "cursar junto" como 1.
+- Capturas de tela em `…/scratchpad/capturas` (temporárias). As de "antes" ficam para a Fase 3.
+
+
+## Melhoria — FASE 3: usabilidade (Nielsen), UI e UX + pontos parciais — ✅ concluída
+
+`pytest`: **809 passaram**. `flask db check` limpo (sem modelo novo nesta fase). Os scripts da página foram checados
+JUNTOS na ordem de carga (um `const hhmm` repetido entre arquivos derrubava o Simulador inteiro — achado na validação).
+
+### Avaliação heurística (antes das correções)
+| # | Heurística | Problema | Tela | Sev. | Correção |
+|---|---|---|---|---|---|
+| 1 | H4 Consistência | Marca "Trilha" no README × "Rumo" no app | README | 2 | README → Rumo |
+| 2 | H4 Consistência | Títulos ≠ menu ("Planejamento de Matrícula", "Calendário Semanal"…) | todas | 2 | títulos = rótulos do menu |
+| 3 | H8 Minimalismo | Dicas de página com 1–2 frases longas | todas | 2 | rótulos curtos ("Passo 2 de 4 · arraste…") |
+| 4 | H8 Minimalismo | Simulador empilhava 7 blocos longos | Simulador | 3 | resumo fixo + abas Visão geral · Riscos · Semestres · E se reprovar · Probabilidade · Sugestão (setas/Home/End) |
+| 5 | H5/H6 Prevenção, reconhecimento | "Começa em" em texto livre AAAA/N | Simulador, Sugestão | 3 | seletor dos próximos períodos + "Outro…" para digitar |
+| 6 | H9 Erros | Erros de campo só em toast | Sugestão, período | 2 | erro junto ao campo (`aria-invalid` + `aria-describedby`) |
+| 7 | H3 Controle | Remover disciplina/semestre/plano e trocar turma sem desfazer; não havia como remover semestre | Planejamento | 3 | toast "Desfazer" (~8 s); confirmação só na exclusão do plano (que também desfaz); botão ✕ no semestre |
+| 8 | H1 Status | Sugestão só dizia "Calculando…" | Sugestão | 2 | etapas grafo → guloso → recozimento → turmas → chance (estimativa enquanto espera; tempos reais ao terminar) |
+| 9 | H2 Mundo real | "Ótimo comprovado/mínimo teórico" técnico | Sugestão | 2 | selo "Prazo mínimo garantido" × "Melhor plano encontrado" com frase simples |
+| 10 | H2 Mundo real | Caminho crítico como lista de chips | Simulador, Sugestão | 2 | cadeia crítica como linha de metrô (terminal âmbar = formatura) |
+| 11 | H6 Reconhecimento | Não dava para comparar o plano atual com a sugestão | Sugestão | 3 | tabela "Plano atual × Sugestão" (formatura, P50, chance, carga média/máx., choques, dias livres) antes de salvar |
+| 12 | H6/H7 | Indisponibilidade digitada hora a hora | Preferências | 2 | grade semanal clicável (clique/arraste/teclado) + presets "Trabalho manhã", "Estágio tarde", "Noturno (só à noite)"; horários exatos recolhidos |
+| 13 | A11y | `--text3` abaixo de 4,5:1 (claro: 4,0 sobre `bg4`; escuro: 4,4) | todas | 2 | claro `#56667D`, escuro `#8D9DB6` (≥ 4,5 em todas as superfícies) |
+| 14 | A11y | Botão "remover" do cartão `display:none` fora do hover: inalcançável por teclado | Planejamento | 3 | sempre presente (discreto), realçado no hover/foco |
+| 15 | A11y | Alvos pequenos e foco só em alguns elementos | todas | 2 | mínimo 24 px (28 px nos `btn-sm`), foco visível em links, abas e células |
+| 16 | H1/H6 | Calendário abria vazio ("Escolha um semestre") com plano pronto | Calendário | 2 | abre no 1º semestre com disciplinas |
+| 17 | H8 | Na sugestão, a frase "é o MENOR prazo…" repetia o selo | Sugestão | 1 | a frase só aparece sem selo |
+| 18 | A11y | Gráfico do Monte Carlo sem alternativa textual | Simulador | 2 | já resolvido na Fase 2 (tabela `sr-only` + frase "X% de chance de formar até AAAA/N") |
+
+### Pontos parciais da rodada anterior (fechados)
+- Selo par/ímpar também nos blocos de aula do Calendário (quando a disciplina não abre no período).
+- Contador "N choques" no topo do semestre também no Planejamento (leva ao cartão) e no Calendário (`choques_texto` da análise).
+- Grupo "cursar junto" impossível é avisado AO SALVAR (`avisos_juntas`, com o motivo).
+- Fluxos verificados no navegador: remover + Desfazer, excluir plano (confirmação + Desfazer), pergunta "cursar junto"
+  (uma vez só), "levar junto" + Desfazer, abas pelo teclado, grade e presets, período inválido com erro no campo,
+  etapas e comparação da sugestão, decisão "atualizar × criar" na importação.
+
+### Validação no navegador
+- `tools/validacao_ui/capturar.py` (telas em 1366/390 px × claro/escuro) e `tools/validacao_ui/fluxos.py` (fluxos acima),
+  contra o app local com login dev (`AUTH_PROVEDOR=dev`, SQLite à parte). Resultado: **0 falhas, 0 erros de console,
+  sem rolagem horizontal em 390 px**.
+- Capturas em `docs/capturas/fase3/`: `antes/`, `depois/`, `fluxos/` e `lado-a-lado/` (antes | depois).
+- Achado da validação: um servidor antigo continuava preso à porta e respondia pelo código velho; as capturas finais
+  foram refeitas com o processo novo.
+
+### Limites
+- O progresso por etapas durante a espera é uma ESTIMATIVA (a resposta vem de uma vez); os tempos reais aparecem no fim.
+- Sugestão com grupo "cursar junto" leva ~5 s no exemplo de CC (roda o otimizador também sem o grupo, para a frase
+  "Para manter X e Y juntas…", mais o Monte Carlo).
+- A lista de períodos parte do histórico/plano; sem nenhum dos dois, do período corrente do relógio da pessoa (é só uma
+  lista para escolher; continua havendo "Automático" e "Outro…").
+- Contraste verificado nos tokens de texto; cores de selos/badges usam as variantes `*-ink` já existentes.
+
+
+## Arquitetura de informação + turmas automáticas + TCC no fim + histórico por CSV — ✅ concluída
+
+`pytest`: **821 passaram**. `flask db check` limpo com a migração nova `f1b2c3d4e5f6` (`plano_item.turma_auto`).
+⚠️ No Postgres do `.env`: `flask --app planner db upgrade` (duas migrações pendentes: `e7a4b9c2d013` e `f1b2c3d4e5f6`).
+
+### Diagnóstico (por que parecia bagunçado)
+1. O **Simulador fazia dois trabalhos opostos**: avaliar o plano montado e CRIAR um plano novo (Sugestão), cada um com
+   seu "Começa em". As optativas só existiam na Sugestão, então os dois chegavam a números diferentes sem dizer por quê.
+2. **Preferências no lugar errado**: valiam para Planejamento, Calendário, Simulador e Sugestão, mas só eram editáveis
+   dentro do Simulador.
+3. **Turma era trabalho manual sem ajuda**: o servidor já calculava a melhor combinação, mas só usava para avisar.
+4. O **Calendário era um "passo"**, mas é só uma forma de VER o plano.
+
+### Como ficou (modelo mental: de onde venho → minha rotina → monto o caminho → testo o caminho)
+| Passo | Tela | Faz |
+|---|---|---|
+| 1 (opcional) | Histórico | o que já cursei; colar OU enviar .csv do sistema acadêmico |
+| 2 (opcional) | **Minha rotina** (nova) | horários em que não posso (grade), turno, dias livres, pesadas, teto por período, trancamento, cursar junto, **optativas** (ainda preciso N; já fiz fora do histórico), prazo |
+| 3 | Planejamento | montar à mão **ou "✨ Sugerir plano"** (a sugestão mudou-se para cá, comparada com o plano aberto; "Usar este plano" cria e abre um plano novo). Turmas **automáticas**. Botão "📅 Semana" |
+| — | Calendário | "a semana do plano" (sem número; no celular sai da barra inferior e fica no botão "Semana") |
+| 4 | Simulador | **só avalia** o plano aberto, com a mesma rotina; diz o que está simulando e leva a "Sugerir um plano melhor" |
+
+- **Optativas únicas**: a rotina guarda "ainda preciso de N créditos" e "já fiz fora do histórico"; a simulação e a
+  sugestão usam os MESMOS números (antes só a sugestão perguntava).
+- **Turmas automáticas** (`plano_item.turma_auto`): com quadro real no período, o Rumo escolhe a turma da melhor
+  combinação do semestre (sem choque, respeitando a rotina — `marcas.turma_sugerida` da análise) e REFAZ a escolha
+  quando o semestre muda. O seletor mostra "Automática: T1 · Qui 08–10" e "✓ escolhida pelo Rumo · troque se quiser";
+  escolher outra turma a deixa fixa ("escolhida por você"); "Automática" devolve a escolha ao Rumo. Plano criado por
+  sugestão já vem com as turmas automáticas.
+- A pergunta "cursar junto?" aparece em Minha rotina e ao abrir "Sugerir plano" (não mais no Simulador).
+
+### TCC no fim do curso e os dois TCCs
+- `domain/fim_de_curso.py`: TCC, Trabalho de Conclusão, Monografia, Projeto Final, Elaboração de TCC — e seminários do
+  último ano ou ligados por requisito a eles — recebem um **degrau** (0 = último semestre), pelo período sugerido
+  (TCC I/Elaboração no 7º, TCC II/Seminários no 8º → 1 e 0) ou pela cadeia de requisitos.
+- Sugestão: penalidade forte por semestre antes do degrau + o guloso não os adianta. No exemplo de CC: Projeto Final e
+  Seminário I no penúltimo, Seminário II no último; a sugestão diz isso numa frase. Ótimo comprovado continua 8/10.
+- Simulador: risco "X fecha o curso, mas está antes dos últimos semestres" → "Mova para o semestre N".
+- "Cursar junto": TCC I + Elaboração de TCC (mesma família, mesmo período) agora são sugeridos como par.
+
+### Histórico por CSV
+- Botão para enviar o .csv/.txt exportado; mesma prévia do texto colado. O parser reconhece CSV (vírgula ou ponto e
+  vírgula, 2+ separadores por linha de forma consistente, aspas respeitadas, BOM do Excel) e separa as colunas antes —
+  senão "60,7" (CH, nota) viraria a nota 60,7. Texto colado com nota "8,5" continua sendo lido como antes.
+
+### Validação no navegador
+`tools/validacao_ui/fluxos.py` (reescrito para a nova arquitetura) e `capturar.py`: 0 falhas, 0 erros de console,
+1366/390 × claro/escuro, sem rolagem horizontal. Capturas em `docs/capturas/arquitetura/`. Achados e corrigidos: ações do
+topo cobrindo o título no celular; 8 itens na barra inferior (Simulador saía da tela); plano vindo da sugestão marcava
+as turmas como "escolhidas por você".
+
+### Limites
+- A detecção de TCC/seminários é por nome e período sugerido (não há coluna "fim de curso" no CSV); um seminário que não
+  é de conclusão, no meio do curso, não é afetado.
+- Turma automática só com quadro REAL do período; em período futuro (projeção) a turma fica para quando o quadro sair.
+
+
+## Sugestão que forma no tempo certo: optativas no meio, plano atual como partida, disciplina em período específico — ✅
+
+`pytest`: **829 passaram**; `db check` limpo (sem modelo novo); ótimo comprovado continua 8/10.
+
+### O problema ("consigo formar em 2029.1 e a sugestão dá 2029.2")
+1. A sugestão otimizava só as obrigatórias e depois tentava ENCAIXAR as optativas nos semestres que sobravam; o que não
+   cabia empurrava a formatura para o fim.
+2. A sugestão começava do zero e ignorava o plano que a pessoa já montou (e que podia ser melhor).
+3. A comparação "Plano atual × Sugestão" não era justa: a data do plano atual não contava as optativas que faltam.
+
+### O que mudou
+- **Optativas dentro da otimização**: os créditos que faltam viram blocos (do tamanho da optativa típica do curso, sem
+  requisito, abrem todo período) otimizados junto com as obrigatórias, com preferência pelo **meio do curso**. Exemplo de
+  CC com 12 créditos: 4 + 4 + 4 no 3º, 4º e 5º semestres, mesma formatura do plano atual (2029/2). A tela diz
+  "Espaço para optativa: N créditos (você escolhe qual)".
+- **Plano atual como ponto de partida**: "Sugerir plano" envia o plano aberto; ele entra como solução inicial da busca,
+  então, sem pedidos novos, a sugestão não forma depois dele.
+- **Comparação justa**: a formatura do plano atual inclui as optativas que faltam ("2030/1 (com as 12 cr de optativas…)").
+- **Disciplina em período específico** (`fixas` na rotina; "Cursar em um período…" no detalhe da disciplina): a sugestão
+  a põe exatamente lá; se ela não abre no período ou os requisitos não ficam prontos, o pedido é ignorado e a sugestão diz
+  por quê. O Simulador avisa quando o plano não respeita o pedido.
+- **Custo dos pedidos**: com disciplina fixada ou "cursar junto", a sugestão compara com a mesma busca sem os pedidos:
+  "Seus pedidos (INF213 em 2028/1) deixam a formatura em 2030/2; sem eles seria 2029/2." O selo de prazo mínimo diz
+  quando é "com os seus pedidos".
+
+### Limites
+- O tamanho do bloco de optativa é a mediana dos créditos das optativas do curso (4 se não houver).
+- O ponto de partida usa as disciplinas do plano que ainda faltam; optativas específicas do plano não substituem os blocos.
+
+## Usabilidade: avaliação de uso + edição de disciplinas
+
+Feito a partir de uma avaliação com a jornada de um aluno novo (Playwright, 1366 px e 390 px, curso de exemplo de CC).
+
+### Editar disciplinas pela tela (sem reimportar CSV)
+- `PATCH /api/cursos/<id>/disciplinas/<d>` edita e `POST /api/cursos/<id>/disciplinas` cria (só quem trouxe o curso;
+  outra conta recebe 403 em curso público e 404 em curso privado). Campos: código, nome, tipo, créditos, carga horária,
+  período na matriz, oferta e requisitos (pré e co, mantendo grupos "ou"). Em branco = não informado (nunca zero).
+- Recusa código repetido (409) e pré-requisitos em círculo (`domain/edicao_catalogo.py`); o erro aponta o campo.
+- Tela Disciplinas: "+ Nova disciplina", "Editar" em cada linha e no detalhe, oferta editável direto na tabela,
+  filtros (obrigatórias, optativas, sem oferta), "Desfazer" depois de salvar. No celular, colunas secundárias somem.
+
+### Problemas da avaliação corrigidos
+1. **"Dá pra trabalhar de manhã?"**: `semana.rotina_comporta` olha todas as turmas conhecidas das obrigatórias que faltam.
+   Minha rotina, Sugestão e Simulador mostram uma resposta só ("Com a sua rotina, N obrigatórias não cabem…"), e
+   `GET /api/cursos/<id>/rotina` a devolve. Riscos repetidos (3+ do mesmo tipo) viram um grupo com título.
+2. **Quadro publicado manda na sugestão**: período com quadro em que a disciplina não está não abre para ela
+   (`_CalendarioComQuadro`); pedido de período nessas condições é ignorado com o motivo.
+3. **Página inicial**: "Como funciona" segue a rota atual (curso → histórico opcional → rotina opcional → planejamento → simulador).
+4. **Período no Planejamento**: o seletor lista também períodos sem quadro ("· sem quadro"); o cartão diferencia
+   "Turmas de 2027/1 ainda não saíram · horário estimado" de "Não está no quadro de 2027/1".
+5. **Painel**: o cartão "pelo seu plano" mostra a melhor data conhecida (`cartao.valor`) e do que ela depende.
+6. **Períodos sugeridos** começam no próximo período de matrícula, não no que está em andamento.
+7. **Calendário**: semestres sem quadro mostram a turma projetada (tracejada, "estimado"), vinda de `turma_projetada`.
+8. **Textos**: a Sugestão sem histórico pede o período sem contradição; a comparação só aparece quando há plano simulado.
+9. **Celular**: toasts no topo (não cobrem o "Próximo passo") e avisos simples somem ao trocar de tela.
+10. **Celular**: semestres empilhados no Planejamento; Calendário vira lista por dia.
+
+### Limites
+- A rotina × curso considera todas as turmas conhecidas, de qualquer período: uma turma antiga fora do horário conta como "cabe".
+- Excluir disciplina pela tela não foi feito (o histórico e os planos dependem dela); continua pela importação.
+
+## Teórica × prática separadas e créditos fora do limite
+
+### Turma teórica e prática separadas
+- `turmas.csv` aceita a coluna opcional `componente` (`teorica` | `pratica`; aceita "Teórica", "T", "Laboratório"…).
+  Vazio = turma completa, como antes. Valor desconhecido é erro de importação.
+- `domain/componentes.py`: no mesmo período, teóricas × práticas viram **opções de matrícula** combinadas
+  (encontros das duas, código "T1+P2", id negativo que se desfaz nas partes). Alocação, otimizador, simulador,
+  rotina e calendário continuam escolhendo UMA turma por disciplina e passam a enxergar a combinação certa.
+- O plano guarda a teórica em `plano_item.turma_id` e a prática em `turma_pratica_id`; a tela vê um id só.
+- Calendário: cada bloco diz a parte ("QUI100 · T1 teórica", "QUI100 · P2 prática").
+
+### Créditos que não contam no limite do semestre
+- `disciplina.conta_no_limite` (padrão: sim). Desmarcado, os créditos contam para formar mas não para o limite da
+  matrícula: sobrecarga, sugestão (capacidade do semestre), replanejamento, espaço para optativas e formatura com
+  optativas usam `Disciplina.creditos_no_limite`.
+- Editável em Disciplinas ("Conta no limite de créditos do semestre"); a tabela mostra "fora do limite".
+- Planejamento e Simulador mostram "10 / 20 créditos · +18 fora do limite".
+
+### Limites
+- A prática não fica presa a uma teórica específica (P1 só com T1): todas as combinações do período valem.
+- Não há coluna `conta_no_limite` no CSV; o ajuste é pela tela.
+- Migração nova: `a3c5e7f9b201` (rodar `flask --app planner db upgrade` no Postgres).

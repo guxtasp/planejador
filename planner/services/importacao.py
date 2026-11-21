@@ -18,7 +18,7 @@ from typing import Any, Mapping
 
 from sqlalchemy.orm import Session
 
-from ..api.errors import AppError, NotFoundError
+from ..api.errors import AppError, ConflictError, NotFoundError
 from ..extensions import db
 from ..importers.validacao import ATUALIZAR, INALTERADO, NOVO, ImportPreview
 from ..models import Curso, Disciplina, Encontro, Requisito, Turma, Visibilidade
@@ -62,10 +62,15 @@ class ImportacaoService:
         curso_id: int | None = None,
         dono_id: int | None = None,
         visibilidade: str | None = None,
+        criar_novo: bool = False,
     ) -> RelatorioImportacao:
         if visibilidade is not None and visibilidade not in {v.value for v in Visibilidade}:
             raise AppError(f"Visibilidade inválida: '{visibilidade}'.")
-        previa = self._previa.gerar(arquivos, curso_id=curso_id, dono_id=dono_id)
+        previa, destino = self._previa.previa_e_destino(arquivos, curso_id=curso_id, dono_id=dono_id,
+                                                         criar_novo=criar_novo)
+        if destino.decisao_necessaria:      # nunca junta nem cria em silêncio
+            raise ConflictError(destino.mensagem or "Escolha: atualizar um curso seu ou criar um novo.",
+                                details={"destino": destino.para_dict()})
         self._exigir_confirmavel(previa)
         try:
             relatorio = self._gravar(previa, curso_id, dono_id, visibilidade)
@@ -95,7 +100,7 @@ class ImportacaoService:
         registros = previa.registros.get("curso.csv", ())
         if not registros:
             raise AppError("Informe o curso: envie curso.csv ou indique o curso de destino (curso_id).")
-        return self._cursos.obter_por_nome(registros[0].nome, dono_id)
+        return None   # sem candidato (ou "criar novo" escolhido): curso novo
 
     # ── escrita (uma função por arquivo, na ordem de dependência) ─────────
     def _gravar(self, previa, curso_id, dono_id, visibilidade) -> RelatorioImportacao:
@@ -176,13 +181,15 @@ class ImportacaoService:
             if acao == NOVO:
                 turma = self._turmas.adicionar(Turma(
                     disciplina_id=disc.id, periodo_letivo=r.periodo_letivo, codigo_turma=r.codigo_turma,
-                    docente=r.docente, vagas=r.vagas))
+                    docente=r.docente, vagas=r.vagas, componente=r.componente))
             else:
                 turma = self._turmas.obter_por_chave(disc.id, r.periodo_letivo, r.codigo_turma)
                 if r.docente is not None:
                     turma.docente = r.docente
                 if r.vagas is not None:
                     turma.vagas = r.vagas
+                if r.componente is not None:
+                    turma.componente = r.componente
             if r.encontros:  # sem horários no arquivo = desconhecido: mantém os do banco
                 turma.encontros = [Encontro(dia=e.dia, inicio=e.inicio, fim=e.fim, local=r.local)
                                    for e in r.encontros]

@@ -45,6 +45,14 @@ class Disciplina:
     periodo_sugerido: int | None = None
     # "sempre" | "impar" | "par"; None = oferta desconhecida (ver `domain.periodicidade`).
     periodicidade: str | None = None
+    # False = os créditos contam para formar, mas NÃO para o limite de créditos do semestre
+    # (ex.: estágio/TCC de 10 créditos com 2 h de aula, em cursos que não os somam na matrícula).
+    conta_no_limite: bool = True
+
+    @property
+    def creditos_no_limite(self) -> int:
+        """O que a disciplina ocupa do limite de créditos do semestre (desconhecido = 0)."""
+        return (self.creditos or 0) if self.conta_no_limite else 0
 
 
 @dataclass(frozen=True)

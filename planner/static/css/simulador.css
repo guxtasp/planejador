@@ -94,3 +94,85 @@ details.sim-bloco{padding:12px 20px}
 .sug-feitas-lista{display:grid;gap:6px;max-height:220px;overflow:auto;margin-top:8px;padding:8px;border:1px solid var(--border,#ddd);border-radius:8px}
 .sug-feita{display:flex;gap:8px;align-items:baseline;font-size:.9em}
 .sim-nota-aviso{border-left:3px solid var(--amber,#D98E04)}
+
+/* Fase 2: preferências, semana e "vou formar quando?" */
+.sim-pref summary{cursor:pointer;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.pref-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-top:12px}
+.pref-grupo{display:flex;flex-direction:column;gap:6px}
+.pref-grupo .form-label{margin-top:4px}
+.pref-linha{display:grid;grid-template-columns:72px 1fr 1fr auto;gap:6px;align-items:center}
+.pref-linha [id$='-motivo']{grid-column:1 / span 3}
+.pref-linha-2{grid-template-columns:1fr 1fr auto}
+.pref-dias{border:none;padding:0;margin:4px 0 0;display:flex;flex-wrap:wrap;gap:4px 12px}
+.pref-dias label{display:inline-flex;gap:4px;align-items:center;min-height:24px;font-size:13px}
+.campo-erro{color:var(--red-ink);font-size:12px;font-weight:600}
+[aria-invalid="true"]{border-color:var(--red)!important;outline:2px solid color-mix(in srgb,var(--red) 35%,transparent)}
+.sim-semana{font-size:12px;color:var(--text2);margin:-2px 0 8px}
+.sim-destaque{font-family:var(--font-display);font-size:18px;margin:0 0 6px}
+.mc-barras{display:flex;gap:6px;align-items:flex-end;overflow-x:auto;padding:8px 0 2px}
+.mc-col{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:44px;font-size:11px;color:var(--text3)}
+.mc-trilho{height:110px;width:26px;display:flex;align-items:flex-end;background:var(--bg4);border-radius:6px 6px 2px 2px}
+.mc-barra{width:100%;background:var(--purple);border-radius:6px 6px 2px 2px;min-height:2px}
+.mc-barra.no-plano{background:var(--green)}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
+@media (max-width:700px){.pref-linha{grid-template-columns:1fr 1fr 1fr}.pref-linha [id$='-motivo']{grid-column:1 / span 2}}
+.sim-pergunta{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 6%,var(--bg2))}
+
+/* ── Fase 3 ── abas, etapas, selo do ótimo, comparação, linha de metrô, grade semanal ── */
+.abas-sim{display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--border);margin:0 0 14px}
+.aba{background:none;border:0;border-bottom:3px solid transparent;padding:8px 12px;min-height:36px;font:inherit;font-size:13px;
+  font-weight:600;color:var(--text2);cursor:pointer;display:inline-flex;gap:6px;align-items:center}
+.aba:hover{color:var(--text)}
+.aba.ativa{color:var(--accent);border-bottom-color:var(--accent)}
+.etapas-sug{list-style:none;padding:0;margin:6px 0;display:grid;gap:4px;font-size:13px;color:var(--text3)}
+.etapas-sug li.feita{color:var(--green-ink)}
+.etapas-sug li.atual{color:var(--text);font-weight:600}
+.selo-otimo{display:flex;flex-direction:column;gap:2px;padding:10px 14px;border-radius:8px;margin:0 0 10px;font-size:13px;border:1px solid var(--border)}
+.selo-otimo b{font-size:14px}
+.selo-otimo.selo-otimo{background:color-mix(in srgb,var(--green) 10%,var(--bg2));color:var(--green-ink);border-color:color-mix(in srgb,var(--green) 35%,var(--border))}
+.selo-otimo.selo-melhor{background:color-mix(in srgb,var(--blue) 8%,var(--bg2));color:var(--text);border-color:color-mix(in srgb,var(--blue) 35%,var(--border))}
+.comparacao{margin:10px 0 14px;overflow-x:auto}
+.comparacao table{border-collapse:collapse;width:100%;font-size:13px;min-width:320px}
+.comparacao caption{text-align:left;font-weight:700;margin-bottom:6px}
+.comparacao th,.comparacao td{padding:7px 10px;border-bottom:1px solid var(--border);text-align:left}
+.comparacao thead th{color:var(--text3);font-size:12px}
+.comparacao td.melhor{color:var(--green-ink);font-weight:700}
+/* a cadeia crítica como linha de metrô: estações ligadas, terminal âmbar (a formatura) */
+.metro{list-style:none;display:flex;flex-wrap:wrap;gap:0;padding:6px 0 10px;margin:4px 0 10px}
+.metro li{position:relative;display:flex;flex-direction:column;align-items:center;min-width:76px;padding-top:18px;font-size:12px;text-align:center}
+.metro li::before{content:"";position:absolute;top:7px;left:0;right:0;height:4px;background:var(--accent)}
+.metro li:first-child::before{left:50%}
+.metro li:last-child::before{right:50%}
+.metro .metro-ponto{position:absolute;top:1px;width:16px;height:16px;border-radius:50%;background:var(--bg2);border:4px solid var(--accent);box-sizing:border-box}
+.metro li.terminal .metro-ponto{background:var(--yellow);border-color:var(--yellow-ink);width:18px;height:18px;top:0}
+.metro small{color:var(--text3)}
+.grade-presets{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px}
+.grade-semanal{display:grid;gap:2px;user-select:none;touch-action:none;max-width:420px}
+.grade-cab,.grade-linha{display:grid;grid-template-columns:34px repeat(6,1fr);gap:2px;align-items:center}
+.grade-cab span{font-size:11px;font-weight:700;color:var(--text3);text-align:center}
+.grade-hora{font-size:10px;color:var(--text3);text-align:right;padding-right:4px}
+.grade-celula{min-height:24px;min-width:24px;border:1px solid var(--border);border-radius:4px;background:var(--bg3);cursor:pointer;padding:0}
+.grade-celula:hover{border-color:var(--accent)}
+.grade-celula.on{background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--red) 55%,var(--bg2)) 0 5px,color-mix(in srgb,var(--red) 35%,var(--bg2)) 5px 10px);border-color:var(--red)}
+.pref-grade{grid-column:1 / -1}
+.pref-exatos summary{cursor:pointer;font-size:12px;color:var(--text2);margin:6px 0}
+.campo-outro{margin-top:6px}
+
+/* ── arquitetura nova: rotina, sugestão no Planejamento, explicação do Simulador ── */
+.sim-explica{font-size:13px;color:var(--text2);display:flex;flex-direction:column;gap:2px;align-self:center}
+.sim-rotina{margin:0 0 12px}
+.sug-cabeca{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.sug-no-planner{margin-bottom:16px}
+.sug-no-planner .sim-sugestao{border-color:var(--accent);box-shadow:var(--shadow)}
+.turma-origem{font-size:10px;color:var(--text3);margin-top:3px}
+.rotina-cabeca{display:flex;gap:12px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;margin-bottom:12px}
+.rotina-cabeca p{margin:0;max-width:640px;color:var(--text2);font-size:13px}
+.rotina-pagina .sim-pref>summary{display:none}            /* na própria tela, o título da página já diz "Minha rotina" */
+.rotina-pagina .sim-pref{padding-top:6px}
+.rotina-veredito .sim-mais{margin-top:6px}
+.risco-grupo{border:1px solid var(--border);border-radius:8px;padding:8px 12px;margin:8px 0;background:var(--bg2)}
+.risco-grupo.g-alta{border-left:3px solid var(--red)}
+.risco-grupo.g-media{border-left:3px solid var(--yellow)}
+.risco-grupo summary{cursor:pointer;display:flex;flex-wrap:wrap;gap:6px;align-items:baseline;min-height:24px}
+.risco-grupo .riscos{margin-top:8px}
+.turma-alerta{color:var(--yellow-ink);font-weight:600}

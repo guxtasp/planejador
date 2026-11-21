@@ -196,7 +196,7 @@ _TIPOS: dict[str, _Tipo] = {
     "turmas.csv": _Tipo(
         chave=lambda r: (_norm(r.disciplina), r.periodo_letivo, _norm(r.codigo_turma)),
         rotulo=lambda r: f"{r.disciplina} · {r.periodo_letivo} · {r.codigo_turma}",
-        campos=("docente", "vagas", "encontros", "local"),
+        campos=("docente", "vagas", "encontros", "local", "componente"),
         existentes=lambda ctx: list(ctx.estado.turmas),
     ),
 }

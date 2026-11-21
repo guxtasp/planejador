@@ -47,7 +47,16 @@ def remover(curso_id: int, historico_id: int):
     return jsonify({"ok": True})
 
 
+@bp.post("/<int:curso_id>/historico/colar")
+@login_obrigatorio
+def colar(curso_id: int):
+    """Tabela colada do sistema acadêmico: prévia, ou grava com `{"confirmar": true}`."""
+    return jsonify({"ok": True, **HistoricoService().colar(curso_id, usuario_atual_id(), request.get_json(silent=True))})
+
+
 @bp.get("/<int:curso_id>/painel")
 @login_obrigatorio
 def painel(curso_id: int):
-    return jsonify({"ok": True, **PainelService().obter(curso_id, usuario_atual_id())})
+    # `?plano_id=` = o plano aberto na tela (a formatura "pelo seu plano" usa ele; senão, o mais recente)
+    plano_id = request.args.get("plano_id", type=int)
+    return jsonify({"ok": True, **PainelService().obter(curso_id, usuario_atual_id(), plano_id)})

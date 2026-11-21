@@ -17,7 +17,7 @@ from planner.extensions import db
 MIGRATIONS_DIR = str(BASE_DIR / "migrations")
 TABELAS = {
     "curso", "disciplina", "requisito", "turma", "encontro", "usuario",
-    "historico", "plano", "plano_semestre", "plano_item",
+    "historico", "plano", "plano_semestre", "plano_item", "preferencia_aluno",
 }
 
 

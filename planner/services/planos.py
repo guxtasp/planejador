@@ -10,6 +10,7 @@ from __future__ import annotations
 from sqlalchemy.orm import Session
 
 from ..api.errors import AppError, NotFoundError
+from ..domain.componentes import id_combinado, opcoes_de_matricula, partes_do_id
 from ..extensions import db
 from ..models import Plano, PlanoItem, PlanoSemestre
 from ..repositories import DisciplinaRepository, PlanoRepository, TurmaRepository
@@ -74,7 +75,16 @@ class PlanoService:
     def _ler_e_validar(self, curso_id: int, payload) -> PlanoEntrada:
         entrada = ler_plano(payload)
         disciplinas = {d.id for d in self._disciplinas.listar_do_curso(curso_id)}
-        turmas = {t.id: (t.disciplina_id, t.periodo_letivo) for t in self._turmas.listar_do_curso(curso_id)}
+        todas = self._turmas.listar_do_curso(curso_id)
+        turmas = {t.id: (t.disciplina_id, t.periodo_letivo) for t in todas}
+        # opções "teórica + prática" também são turmas válidas do plano (id negativo, ver domain.componentes)
+        por_disciplina: dict[int, list] = {}
+        for t in todas:
+            por_disciplina.setdefault(t.disciplina_id, []).append(t)
+        for ts in por_disciplina.values():
+            for partes in opcoes_de_matricula(ts):
+                if len(partes) == 2:
+                    turmas[id_combinado(partes[0].id, partes[1].id)] = (partes[0].disciplina_id, partes[0].periodo_letivo)
         validar_referencias(entrada, disciplinas, turmas)
         return entrada
 
@@ -85,7 +95,8 @@ class PlanoService:
                 ordem=i, label=s.rotulo, periodo_letivo=s.periodo_letivo,
                 itens=[
                     PlanoItem(
-                        disciplina_id=it.disciplina_id, turma_id=it.turma_id,
+                        disciplina_id=it.disciplina_id, turma_auto=it.turma_auto,
+                        **_colunas_da_turma(it.turma_id),
                         encontros_livres=encontros_para_json(it.encontros_livres) or None,
                     )
                     for it in s.itens
@@ -93,3 +104,11 @@ class PlanoService:
             )
             for i, s in enumerate(entrada.semestres, start=1)
         ]
+
+
+def _colunas_da_turma(turma_id: int | None) -> dict:
+    """Opção combinada vira as duas colunas (teórica em `turma_id`, prática em `turma_pratica_id`)."""
+    if turma_id is None:
+        return {"turma_id": None, "turma_pratica_id": None}
+    partes = partes_do_id(turma_id)
+    return {"turma_id": partes[0], "turma_pratica_id": partes[1] if len(partes) == 2 else None}

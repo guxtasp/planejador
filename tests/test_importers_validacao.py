@@ -33,8 +33,12 @@ def previa(estado=None, **corpos):
 
 
 def problemas(p, severidade=None):
-    """[(arquivo, linha, coluna)] dos problemas, opcionalmente só de uma severidade."""
-    return [(i.arquivo, i.linha, i.coluna) for i in p.issues if severidade in (None, i.severidade)]
+    """
+    [(arquivo, linha, coluna)] dos problemas, opcionalmente só de uma severidade.
+    O AVISO de periodicidade não informada fica de fora (testes próprios em test_periodicidade_validacao).
+    """
+    return [(i.arquivo, i.linha, i.coluna) for i in p.issues if severidade in (None, i.severidade)
+            and not (i.severidade == Severidade.AVISO and i.coluna == "periodicidade")]
 
 
 def erros(p):
@@ -42,8 +46,8 @@ def erros(p):
 
 
 def avisos(p):
-    """Avisos das regras testadas aqui; o de periodicidade tem testes próprios (test_periodicidade_validacao)."""
-    return [a for a in problemas(p, Severidade.AVISO) if a[2] != "periodicidade"]
+    """Avisos das regras testadas aqui (sem o de periodicidade, ver `problemas`)."""
+    return problemas(p, Severidade.AVISO)
 
 
 def arquivo(p, nome):

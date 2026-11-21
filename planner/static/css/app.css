@@ -297,7 +297,8 @@ table thead th{position:sticky;top:0;background:var(--bg2);z-index:1}
   #planner-wrap{flex-direction:column;height:auto;overflow:visible}
   #disc-palette{width:100%;max-height:260px}
   .modal{padding:18px;width:100%;border-radius:12px 12px 0 0;align-self:flex-end}
-  #toast-area{left:16px;right:16px;bottom:76px}
+  /* no celular, em cima: embaixo ficam a barra de passos e o "Próximo passo" */
+  #toast-area{left:16px;right:16px;top:12px;bottom:auto}
   .toast{max-width:none}
 }
 @media(max-width:900px) and (min-width:641px){.grid-4{grid-template-columns:1fr 1fr}}
@@ -366,3 +367,89 @@ table thead th{position:sticky;top:0;background:var(--bg2);z-index:1}
   #proximo-passo{padding:8px 16px}
   #proximo-passo .pp-txt{display:none}
 }
+
+/* Selo de oferta único e marcas (choque, disponibilidade) — mesmas em todas as telas */
+.selo-oferta.estimada{outline:1px dashed currentColor;outline-offset:-1px}
+.cal-indisponivel{position:absolute;left:0;right:0;pointer-events:none;
+  background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--red) 10%,transparent) 0 6px,transparent 6px 12px);
+  border-top:1px dashed color-mix(in srgb,var(--red) 50%,transparent);border-bottom:1px dashed color-mix(in srgb,var(--red) 50%,transparent)}
+.cal-indisponivel span{position:absolute;right:4px;top:2px;font-size:9px;color:var(--red-ink);font-weight:600}
+.formatura-duas{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px}
+.formatura-duas a{color:var(--accent);font-size:12px}
+.colar-tabela{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px}
+.colar-tabela th,.colar-tabela td{padding:6px 8px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}
+.colar-tabela small{color:var(--text3)}
+.sem-optativas{margin:0 12px 12px;font-size:11px}
+.opt-lista{list-style:none;padding:0;margin:0;display:grid;gap:8px;max-height:55vh;overflow:auto}
+.opt-lista li{display:flex;gap:10px;justify-content:space-between;align-items:flex-start;padding:8px 10px;border:1px solid var(--border);border-radius:8px}
+.opt-lista small{color:var(--text3)}
+.toast-acao{display:flex;gap:10px;align-items:center}
+.toast-acao button{min-height:28px}
+
+/* Fase 3 · acessibilidade: alvo mínimo de 24×24 px (WCAG 2.2 AA) e foco visível também em links e abas */
+.btn,.btn-sm,button,select,.form-select,input[type=checkbox],input[type=radio]{min-height:24px}
+.btn-sm{min-height:28px}
+input[type=checkbox],input[type=radio]{min-width:18px;min-height:18px}
+a:focus-visible,[role=tab]:focus-visible,[role=button]:focus-visible,.grade-celula:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.disc-card.destaque{outline:3px solid var(--red);outline-offset:2px;transition:outline .2s}
+.cal-selo .badge{font-size:9px;padding:1px 6px}
+/* Fase 3: o "remover" do cartão precisa ser alcançável pelo teclado (antes ficava display:none fora do hover) */
+.disc-card .disc-actions{display:flex;opacity:.45}
+.disc-card:hover .disc-actions,.disc-card:focus-within .disc-actions{opacity:1}
+/* Calendário é uma forma de VER o plano (sem número na rota): recuado sob o Planejamento */
+.nav-item.nav-sub{padding-left:28px}
+.nav-item.nav-sub svg{width:15px;height:15px;opacity:.85}
+.colar-arquivo{font-size:12px;color:var(--text2);margin:4px 0 8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+/* Celular: título em cima e ações embaixo (antes as ações cobriam o título); o Calendário sai da barra
+   inferior (é a semana do plano: botão "Semana" no Planejamento) para os 5 passos caberem em 390 px */
+#topbar-actions{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+@media(max-width:640px){
+  #topbar{flex-wrap:wrap}
+  #topbar .titulo{flex:1 1 100%}
+  #topbar-actions{width:100%}
+  #topbar-actions .form-select{flex:1 1 160px;width:auto!important}
+  .nav-item.nav-sub{display:none}
+}
+
+/* ── Disciplinas: catálogo e edição ── */
+.disc-busca{margin-bottom:16px;padding:12px 16px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.disc-busca .search-wrap{flex:1 1 260px}
+.disc-filtros{display:flex;flex-wrap:wrap;gap:6px}
+.disc-filtros .ativo{background:var(--accent);color:#fff;border-color:var(--accent)}
+.disc-tabela-card{padding:0;overflow:hidden}
+.disc-tabela-rolagem{overflow-x:auto}
+.disc-tabela{width:100%;border-collapse:collapse;font-size:13px}
+.disc-tabela th{padding:10px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);background:var(--bg3);white-space:nowrap}
+.disc-tabela td{padding:8px 12px;border-bottom:1px solid var(--border);color:var(--text2);vertical-align:middle}
+.disc-tabela tbody tr:hover{background:var(--bg3)}
+.disc-cod{font-size:12px;font-weight:700;color:var(--text);border-left:3px solid var(--accent);padding-left:8px;white-space:nowrap}
+.link-disc{background:none;border:0;padding:0;font:inherit;font-weight:500;color:var(--text);cursor:pointer;text-align:left}
+.link-disc:hover{text-decoration:underline}
+.disc-oferta{width:auto;min-width:130px;padding:5px 8px;font-size:12px}
+.disc-oferta.vazia{border-color:var(--yellow,#d4a017)}
+.disc-acoes{text-align:right;white-space:nowrap}
+.dica-campo{font-size:12px;color:var(--text3);margin-top:4px}
+.req-bloco{margin-bottom:12px}
+.req-titulo{font-size:12px;font-weight:600;margin-bottom:6px}
+.req-titulo .dica-campo{display:inline;font-weight:400;margin:0 0 0 4px}
+.req-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px}
+.req-chip{display:inline-flex;align-items:center;gap:4px}
+.req-chip button{background:none;border:0;color:inherit;cursor:pointer;min-width:24px;min-height:24px;padding:0;font-size:12px}
+@media(max-width:640px){.disc-tabela .col-opc{display:none}.disc-tabela td,.disc-tabela th{padding:8px}}
+.modal-footer{flex-wrap:wrap}
+/* celular: semestres um embaixo do outro (sem rolagem lateral) e a semana como lista por dia */
+@media(max-width:640px){
+  #planner-board{flex-direction:column;overflow-x:visible;align-items:stretch}
+  #planner-board .sem-col{min-width:0!important;width:100%}
+  #planner-right{overflow:visible}
+}
+.cal-lista{display:flex;flex-direction:column;gap:12px}
+.cal-lista h3{font-size:13px;margin-bottom:6px;color:var(--text2)}
+.cal-lista ul{list-style:none;display:flex;flex-direction:column;gap:6px;padding:0}
+.cal-lista li{display:flex;gap:10px;align-items:flex-start;background:var(--bg2);border:1px solid var(--border);border-left:4px solid var(--accent);border-radius:8px;padding:8px 10px;cursor:pointer;font-size:13px}
+.cal-lista li.estimada{border-style:dashed}
+.cal-lista li.conflito{outline:2px solid var(--red);outline-offset:-2px}
+.cal-lista .hora{font-variant-numeric:tabular-nums;font-weight:700;min-width:92px;color:var(--text)}
+.cal-lista .alerta{color:var(--red-ink);font-weight:700;font-size:11px}
+.cal-lista .livre{font-size:12px;color:var(--text3);padding:4px 0}
+.ed-check{display:flex;gap:8px;align-items:center;font-size:13px;font-weight:600;cursor:pointer}.ed-check input{width:18px;height:18px}

@@ -4,7 +4,7 @@ Regra: rotas só traduzem HTTP ⇄ services; nada de SQL ou regra de negócio aq
 """
 from flask import Flask
 
-from . import auth, cursos, health, historico, importacao, oferta, planos
+from . import auth, cursos, health, historico, importacao, oferta, planos, simulacao
 from .origem import registrar_verificacao_de_origem
 from .sessao import registrar_carregamento_do_usuario
 
@@ -24,3 +24,4 @@ def register_blueprints(app: Flask) -> None:
     app.register_blueprint(oferta.bp)
     app.register_blueprint(historico.bp)
     app.register_blueprint(planos.bp)
+    app.register_blueprint(simulacao.bp)

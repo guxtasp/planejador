@@ -56,6 +56,7 @@ class TurmaExistente:
     vagas: int | None = None
     encontros: tuple[Encontro, ...] = ()
     local: str | None = None
+    componente: str | None = None
 
 
 @dataclass(frozen=True)

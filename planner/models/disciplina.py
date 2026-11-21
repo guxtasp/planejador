@@ -1,7 +1,7 @@
 """Catálogo estável do curso: disciplinas e seus requisitos."""
 from __future__ import annotations
 
-from sqlalchemy import CheckConstraint, ForeignKey, Integer, String, UniqueConstraint
+from sqlalchemy import Boolean, CheckConstraint, ForeignKey, Integer, String, UniqueConstraint, true
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..extensions import db
@@ -36,6 +36,8 @@ class Disciplina(db.Model):
     cor: Mapped[str | None] = mapped_column(String(9))  # hex, ex.: "#3b82f6"
     # sempre | impar | par; NULL = oferta desconhecida (ver `Periodicidade`).
     periodicidade: Mapped[str | None] = mapped_column(String(6))
+    # False = conta para formar, mas não para o limite de créditos do semestre (estágio/TCC em alguns cursos).
+    conta_no_limite: Mapped[bool] = mapped_column(Boolean, default=True, server_default=true())
 
     curso: Mapped["Curso"] = relationship(back_populates="disciplinas")  # noqa: F821
     # Requisitos DESTA disciplina (o que ela exige). Há duas FKs para

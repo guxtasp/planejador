@@ -1,7 +1,8 @@
 """
 Casos de uso de leitura de cursos (Etapa 4A): listar, abrir e catálogo.
 
-Só leitura — gravar curso continua sendo da importação (`ImportacaoService`).
+Só leitura — gravar curso é da importação (`ImportacaoService`) e editar disciplina, do
+`DisciplinaService`.
 Devolve dicionários prontos para JSON; a camada HTTP não conhece modelos.
 """
 from __future__ import annotations
@@ -11,6 +12,7 @@ from sqlalchemy.orm import Session
 from ..api.errors import ConflictError, NotFoundError, ProibidoError
 from ..models import Curso, Visibilidade
 from ..repositories import CursoRepository, DisciplinaRepository
+from .disciplinas_json import disciplina_json
 
 
 class CursoService:
@@ -43,20 +45,11 @@ class CursoService:
         por_id = {d.id: d for d in disciplinas}   # resolve requisitos sem nova consulta
         return {
             "curso": self._resumo(curso),
-            "disciplinas": [
-                {
-                    "id": d.id, "codigo": d.codigo, "nome": d.nome, "tipo": d.tipo,
-                    "creditos": d.creditos, "carga_h": d.carga_h,
-                    "periodo_sugerido": d.periodo_sugerido, "cor": d.cor,
-                    "periodicidade": d.periodicidade,
-                    "requisitos": [
-                        {"id": r.requisito_id, "codigo": por_id[r.requisito_id].codigo,
-                         "nome": por_id[r.requisito_id].nome, "tipo": r.tipo, "grupo_alt": r.grupo_alt}
-                        for r in d.requisitos if r.requisito_id in por_id
-                    ],
-                }
-                for d in disciplinas
-            ],
+            # a tela só mostra a edição da oferta (par/ímpar) para quem pode alterá-la: o dono
+            "pode_editar_oferta": usuario_id is not None and curso.dono_id == usuario_id,
+            # …e editar/criar disciplinas (a mesma regra: só quem trouxe o curso)
+            "pode_editar_catalogo": usuario_id is not None and curso.dono_id == usuario_id,
+            "disciplinas": [disciplina_json(d, por_id, _oferta(d)) for d in disciplinas],
         }
 
     # ── excluir ───────────────────────────────────────────────────────────
@@ -101,3 +94,10 @@ class CursoService:
             "duracao_semestres": c.duracao_semestres, "dias_letivos": c.dias_letivos,
             "visibilidade": c.visibilidade,
         }
+
+
+def _oferta(d) -> dict:
+    from ..domain.entidades import Disciplina as DiscDominio
+    from ..domain.periodicidade import periodicidade_efetiva
+    e = periodicidade_efetiva(DiscDominio(d.id, d.codigo, d.nome, d.creditos, d.tipo, d.periodo_sugerido, d.periodicidade))
+    return {"valor": e.valor, "origem": e.origem}

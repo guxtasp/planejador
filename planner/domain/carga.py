@@ -17,8 +17,9 @@ from .entidades import Disciplina
 class AvaliacaoCarga:
     creditos: int
     limite: int | None
-    sobrecarga: bool
+    sobrecarga: bool                           # pelos créditos QUE CONTAM no limite (ver `creditos_no_limite`)
     disciplinas_sem_creditos: tuple[int, ...]  # somadas como 0, mas sinalizadas
+    creditos_no_limite: int = 0                # o que ocupa do limite (estágio/TCC podem não contar)
 
 
 def avaliar_carga(
@@ -27,9 +28,11 @@ def avaliar_carga(
     """Soma os créditos conhecidos e compara com o limite do curso."""
     lista = list(disciplinas)
     total = sum(d.creditos or 0 for d in lista)
+    no_limite = sum(d.creditos_no_limite for d in lista)
     return AvaliacaoCarga(
         creditos=total,
         limite=limite,
-        sobrecarga=limite is not None and total > limite,
+        sobrecarga=limite is not None and no_limite > limite,
+        creditos_no_limite=no_limite,
         disciplinas_sem_creditos=tuple(sorted(d.id for d in lista if d.creditos is None)),
     )

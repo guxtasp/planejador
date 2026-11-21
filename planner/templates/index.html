@@ -33,22 +33,26 @@
       <div class="nav-section">Sua rota</div>
       <div class="nav-item" data-page="historico" onclick="navTo('historico',this)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/><path d="M12 6v6l4 2"/></svg>
-        <span class="nav-txt"><b>Histórico</b><small>O que já cursei</small></span>
+        <span class="nav-txt"><b>Histórico</b><small>O que já cursei (opcional)</small></span>
         <i class="nav-passo" aria-hidden="true">1</i>
+      </div>
+      <div class="nav-item" data-page="rotina" onclick="navTo('rotina',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
+        <span class="nav-txt"><b>Minha rotina</b><small>Horários, ritmo e optativas</small></span>
+        <i class="nav-passo" aria-hidden="true">2</i>
       </div>
       <div class="nav-item" data-page="planner" onclick="navTo('planner',this)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
-        <span class="nav-txt"><b>Planejamento</b><small>Montar os próximos semestres</small></span>
-        <i class="nav-passo" aria-hidden="true">2</i>
-      </div>
-      <div class="nav-item" data-page="calendario" onclick="navTo('calendario',this)">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-        <span class="nav-txt"><b>Calendário</b><small>Turmas e horários da semana</small></span>
+        <span class="nav-txt"><b>Planejamento</b><small>Montar ou sugerir o plano</small></span>
         <i class="nav-passo" aria-hidden="true">3</i>
+      </div>
+      <div class="nav-item nav-sub" data-page="calendario" onclick="navTo('calendario',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        <span class="nav-txt"><b>Calendário</b><small>A semana do plano</small></span>
       </div>
       <div class="nav-item" data-page="simulador" onclick="navTo('simulador',this)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>
-        <span class="nav-txt"><b>Simulador</b><small>Testar o futuro e a formatura</small></span>
+        <span class="nav-txt"><b>Simulador</b><small>Testar o plano</small></span>
         <i class="nav-passo" aria-hidden="true">4</i>
       </div>
       <div class="nav-section">Mapas e dados</div>
@@ -93,6 +97,7 @@
 <script src="{{ url_for('static', filename='js/page_historico.js') }}"></script>
 <script src="{{ url_for('static', filename='js/page_disciplinas.js') }}"></script>
 <script src="{{ url_for('static', filename='js/page_simulador.js') }}"></script>
+<script src="{{ url_for('static', filename='js/page_rotina.js') }}"></script>
 <script src="{{ url_for('static', filename='js/disc_detalhe.js') }}"></script>
 <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>

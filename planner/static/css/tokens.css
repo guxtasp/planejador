@@ -26,7 +26,7 @@
   /* Texto */
   --text:#0E1A2B;        /* tinta */
   --text2:#44546A;
-  --text3:#62728A;
+  --text3:#56667D;      /* ≥ 4,5:1 sobre todas as superfícies (AA) */
   /* Cor da marca (índigo) e estados: cada estado tem cor própria e NÃO muda com a marca */
   --accent:#4338CA;  --accent2:#3730A3;  --on-accent:#FFFFFF;
   --green:#0E8F5F;   --green-ink:#0B6B48;     /* concluída */
@@ -43,7 +43,7 @@
 @media (prefers-color-scheme:dark){
   :root{
     --bg:#0A111C; --bg2:#111A29; --bg3:#172234; --bg4:#1F2D45; --border:#27364F;
-    --text:#E8EEF7; --text2:#A9B7CC; --text3:#8393AC;
+    --text:#E8EEF7; --text2:#A9B7CC; --text3:#8D9DB6;
     --accent:#8B8DF7; --accent2:#B4B6FA; --on-accent:#0B0B1F;
     --green:#2FBF8A; --green-ink:#6EE0B5;
     --yellow:#F5C242; --yellow-ink:#F7D27A;

@@ -56,3 +56,19 @@ def aprovadas(tentativas: Iterable[Tentativa]) -> frozenset[int]:
 def cursando(tentativas: Iterable[Tentativa]) -> frozenset[int]:
     """IDs das disciplinas em andamento (e ainda não aprovadas)."""
     return frozenset(d for d, s in situacoes(tentativas).items() if s == CURSANDO)
+
+
+def ja_reprovadas(tentativas: Iterable[Tentativa]) -> frozenset[int]:
+    """IDs das disciplinas com ao menos UMA reprovação (mesmo que depois aprovadas)."""
+    return frozenset(t.disciplina_id for t in tentativas if t.status == STATUS_REPROVADO)
+
+
+def contagem_de_resultados(tentativas: Iterable[Tentativa]) -> tuple[int, int]:
+    """(aprovações, reprovações) entre as tentativas já encerradas (cursando não conta)."""
+    aprov = reprov = 0
+    for t in tentativas:
+        if t.status == STATUS_APROVADO:
+            aprov += 1
+        elif t.status == STATUS_REPROVADO:
+            reprov += 1
+    return aprov, reprov

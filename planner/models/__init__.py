@@ -14,10 +14,11 @@ from .disciplina import Disciplina, Requisito
 from .enums import DiaSemana, Periodicidade, StatusHistorico, TipoDisciplina, TipoRequisito, Visibilidade
 from .oferta import Encontro, Turma
 from .plano import Plano, PlanoItem, PlanoSemestre
+from .preferencia import PreferenciaAluno
 from .usuario import Historico, Usuario
 
 __all__ = [
     "Curso", "Disciplina", "Requisito", "Turma", "Encontro",
-    "Usuario", "Historico", "Plano", "PlanoSemestre", "PlanoItem",
+    "Usuario", "Historico", "Plano", "PlanoSemestre", "PlanoItem", "PreferenciaAluno",
     "DiaSemana", "Periodicidade", "StatusHistorico", "TipoDisciplina", "TipoRequisito", "Visibilidade",
 ]

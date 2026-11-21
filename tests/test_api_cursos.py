@@ -133,7 +133,8 @@ def test_nenhuma_tela_esta_marcada_como_pendente_ou_esmaecida():
     core = (JS / "core.js").read_text(encoding="utf-8")
     assert "PAGINAS_PENDENTES" not in core and "RECURSOS" not in core
     itens = re.findall(r'<div class="nav-item[^>]*data-page="(\w+)"[^>]*>', html)
-    assert sorted(itens) == ["calendario", "dashboard", "disciplinas", "fluxograma", "historico", "planner", "simulador"]
+    assert sorted(itens) == ["calendario", "dashboard", "disciplinas", "fluxograma", "historico", "planner", "rotina",
+                             "simulador"]
     for tag in re.findall(r'<div class="nav-item[^>]*>', html):
         assert "opacity" not in tag and "próxima etapa" not in tag
 

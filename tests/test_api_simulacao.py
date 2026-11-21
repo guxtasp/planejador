@@ -53,6 +53,7 @@ def test_simulacao_devolve_blocos_e_riscos_com_frase_pronta(client_logado, curso
     fora = next(x for x in j["riscos"] if x["tipo"] == "fora_de_oferta")
     assert fora["gravidade"] == "alta" and fora["mensagem"] and fora["acao"] and "2028/1" in fora["acao"]
     assert {"resumo", "critico", "cenarios", "premissas"} <= set(j)
+    assert "cadeia" in j["critico"] and "cadeia_mensagem" in j["critico"]
 
 
 def test_plano_correto_tem_veredito_ok_ou_medio_e_cenarios(client_logado, curso_pequeno):
@@ -133,3 +134,44 @@ def test_disciplina_de_outro_curso_da_404(client_logado, curso_pequeno):
     r = client_logado.patch(url(curso_pequeno, "disciplinas/periodicidade"),
                             json={"itens": [{"disciplina_id": 999999, "periodicidade": "par"}]})
     assert r.status_code == 404
+
+
+# ── Fase 2 ───────────────────────────────────────────────────────────────────
+def _registrar(client, curso, codigo, status, periodo):
+    r = client.post(url(curso, "historico"), json={"disciplina_id": curso["disc"][codigo], "status": status,
+                                                   "periodo_letivo": periodo})
+    assert r.status_code == 201, r.get_json()
+
+
+def test_simulacao_traz_prazo_monte_carlo_e_semana(client_logado, curso_pequeno):
+    definir_oferta(client_logado, curso_pequeno, AAA100="sempre", BBB100="sempre", CCC100="sempre")
+    _registrar(client_logado, curso_pequeno, "CCC100", "reprovado", "2026/1")
+    corpo = {**plano_simples(curso_pequeno), "preferencias": {"simulacoes": 100, "max_pesadas": 1}}
+    j = client_logado.post(url(curso_pequeno, "simulacao"), json=corpo).get_json()
+    # duração do curso = 2 semestres; ingresso = 2026/1 (histórico); formatura 2027/2 = 4 semestres
+    assert j["prazo"]["origem_ingresso"] == "historico" and j["prazo"]["semestres_usados"] == 4
+    assert j["prazo"]["no_prazo_maximo"] is False and any(r["tipo"] == "prazo_maximo" for r in j["riscos"])
+    mc = j["monte_carlo"]
+    assert mc["n"] == 100 and mc["taxa"]["origem"] == "historico" and mc["mensagem"]
+    assert abs(sum(d["pct"] for d in mc["distribuicao"]) + mc["nao_formou_pct"] - 100) < 0.5
+    assert j["semestres"][0]["semana"]["resumo"]
+    assert [p["codigo"] for p in j["preferencias"]["pesadas"]] == ["CCC100"]          # reprovada = pesada
+    assert j["preferencias"]["pesadas"][0]["motivo"] == "reprovada"
+
+
+def test_preferencia_invalida_volta_422_com_o_campo(client_logado, curso_pequeno):
+    corpo = {**plano_simples(curso_pequeno), "preferencias": {"turno": "madrugada"}}
+    r = client_logado.post(url(curso_pequeno, "simulacao"), json=corpo)
+    assert r.status_code == 422 and r.get_json()["detalhes"] == {"campo": "turno"}
+    r = client_logado.post(url(curso_pequeno, "simulacao/sugerir"),
+                           json={"periodo_inicial": "2027/1", "preferencias": {"pesadas": [999999]}})
+    assert r.status_code == 422 and r.get_json()["detalhes"] == {"campo": "pesadas"}
+
+
+def test_sugestao_respeita_trancamento_e_traz_chance_no_prazo(client_logado, curso_pequeno):
+    definir_oferta(client_logado, curso_pequeno, AAA100="sempre", BBB100="sempre", CCC100="sempre")
+    corpo = {"periodo_inicial": "2027/1", "preferencias": {"periodos_pulados": ["2027/2"], "simulacoes": 100}}
+    j = client_logado.post(url(curso_pequeno, "simulacao/sugerir"), json=corpo).get_json()
+    assert j["viavel"] and "2027/2" not in [s["periodo"] for s in j["semestres"] if s["itens"]]
+    assert j["monte_carlo"]["chance_no_prazo_do_plano_pct"] >= 0 and j["prazo"]["mensagem"]
+    assert j["preferencias"]["periodos_pulados"] == ["2027/2"]

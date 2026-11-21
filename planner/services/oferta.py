@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from sqlalchemy.orm import Session
 
+from ..domain.componentes import id_combinado, opcoes_de_matricula
 from ..domain.entidades import Encontro as EncontroDominio
 from ..domain.grade import derivar_grade
 from ..repositories import TurmaRepository
@@ -39,16 +40,35 @@ class OfertaService:
         return {
             "periodos": periodos,
             "grade": {"dias": list(grade.dias), "hora_inicio": grade.hora_inicio, "hora_fim": grade.hora_fim},
-            "turmas": [
-                {
-                    "id": t.id, "disciplina_id": t.disciplina_id,
-                    "periodo_letivo": t.periodo_letivo, "codigo_turma": t.codigo_turma,
-                    "docente": t.docente, "vagas": t.vagas,
-                    "encontros": [
-                        {"dia": e.dia, "inicio": hhmm(e.inicio), "fim": hhmm(e.fim), "local": e.local}
-                        for e in t.encontros
-                    ],
-                }
-                for t in turmas
-            ],
+            # opções de matrícula: turma completa, ou teórica + prática combinadas (id negativo)
+            "turmas": [_opcao_json(partes) for partes in _opcoes(turmas)],
         }
+
+
+def _opcoes(turmas) -> list[tuple]:
+    por_disciplina: dict[int, list] = {}
+    for t in turmas:
+        por_disciplina.setdefault(t.disciplina_id, []).append(t)
+    return [p for ts in por_disciplina.values() for p in opcoes_de_matricula(ts)]
+
+
+def _encontros(t) -> list[dict]:
+    return [{"dia": e.dia, "inicio": hhmm(e.inicio), "fim": hhmm(e.fim), "local": e.local,
+             **({"componente": t.componente} if t.componente else {})} for e in t.encontros]
+
+
+def _opcao_json(partes) -> dict:
+    t = partes[0]
+    if len(partes) == 1:
+        return {"id": t.id, "disciplina_id": t.disciplina_id, "periodo_letivo": t.periodo_letivo,
+                "codigo_turma": t.codigo_turma, "docente": t.docente, "vagas": t.vagas,
+                "componente": t.componente, "encontros": _encontros(t)}
+    teo, pra = partes
+    docentes = [x for x in (teo.docente, pra.docente) if x]
+    vagas = [x for x in (teo.vagas, pra.vagas) if x is not None]
+    return {"id": id_combinado(teo.id, pra.id), "disciplina_id": t.disciplina_id, "periodo_letivo": t.periodo_letivo,
+            "codigo_turma": f"{teo.codigo_turma}+{pra.codigo_turma}",
+            "docente": " / ".join(dict.fromkeys(docentes)) or None, "vagas": min(vagas) if vagas else None,
+            "componente": "combinada",
+            "partes": [{"id": x.id, "codigo_turma": x.codigo_turma, "componente": x.componente} for x in partes],
+            "encontros": _encontros(teo) + _encontros(pra)}

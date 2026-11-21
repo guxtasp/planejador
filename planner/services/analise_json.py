@@ -93,6 +93,7 @@ def ler_payload(payload) -> list[dom.SemestrePlano]:
                 inteiro(item.get("disciplina_id"), f"Semestre {i}: disciplina_id"),
                 None if turma is None else inteiro(turma, f"Semestre {i}: turma_id"),
                 ler_encontros_livres(item.get("encontros_livres"), f"Semestre {i}"),
+                bool(item.get("turma_auto")),
             ))
         resultado.append(dom.SemestrePlano(tuple(itens), periodo or None))
     return resultado
@@ -106,11 +107,62 @@ def _ref(d: Disciplina) -> dict:
     return {"id": d.id, "codigo": d.codigo, "nome": d.nome}
 
 
+# ── marcas do item: choque, disponibilidade, horário desconhecido, optativa ──
+_DIA_CURTO = {"SEG": "Seg", "TER": "Ter", "QUA": "Qua", "QUI": "Qui", "SEX": "Sex", "SAB": "Sáb", "DOM": "Dom"}
+
+
+def _h(t) -> str:
+    return f"{t.hour}" if t.minute == 0 else f"{t.hour}:{t.minute:02d}"
+
+
+def marcas_do_item(choques, bate_indisponivel: bool, horario_origem: str, tipo: str, creditos,
+                   disciplinas: Mapping[int, Disciplina], nao_cabe: bool = False, turma_que_cabe: str | None = None,
+                   checa_disponibilidade: bool = False, junto_com=()) -> dict:
+    """
+    O que o cartão da disciplina mostra, já em texto (a tela não recalcula). Regra única para
+    simulação, sugestão, Planejamento e Calendário:
+      vermelho  "Choque com XXX (Seg 14–16)"          — os dois horários são reais/próprios;
+      amarelo   "Possível choque com XXX (…)"          — algum horário é projeção;
+      vermelho  "Bate com sua disponibilidade";
+      cinza     "Sem horário — choque não verificado"  — nunca parece "sem choque" quando não deu para checar.
+    """
+    lista, tags = [], []
+    for c in choques:
+        quem = disciplinas[c.com].codigo if c.com in disciplinas else str(c.com)
+        quando = f"{_DIA_CURTO.get(c.dia, c.dia)} {_h(c.inicio)}–{_h(c.fim)}"
+        texto = f"Choque com {quem} ({quando})" if c.firme else f"Possível choque com {quem} ({quando})"
+        lista.append({"com": _ref(disciplinas[c.com]) if c.com in disciplinas else {"id": c.com},
+                      "dia": c.dia, "horario": f"{_hhmm(c.inicio)}–{_hhmm(c.fim)}", "firme": c.firme, "texto": texto})
+        tags.append({"tipo": "choque" if c.firme else "possivel_choque", "cor": "red" if c.firme else "yellow",
+                     "texto": texto})
+    if nao_cabe:
+        tags.append({"tipo": "nao_cabe", "cor": "red", "texto": "Não cabe na sua disponibilidade"})
+    elif bate_indisponivel:
+        tags.append({"tipo": "disponibilidade", "cor": "red", "texto": "Bate com sua disponibilidade"})
+    if turma_que_cabe:
+        tags.append({"tipo": "turma_que_cabe", "cor": "yellow", "texto": f"A turma {turma_que_cabe} cabe na sua disponibilidade"})
+    if horario_origem == "desconhecido":
+        texto = ("Sem horário — choque e disponibilidade não verificados" if checa_disponibilidade
+                 else "Sem horário — choque não verificado")
+        tags.append({"tipo": "sem_horario", "cor": "gray", "texto": texto})
+    if junto_com:
+        nomes = ", ".join(disciplinas[i].codigo for i in junto_com if i in disciplinas)
+        tags.append({"tipo": "junto", "cor": "accent", "texto": f"Junto com {nomes}"})
+    if tipo != "obrigatoria":
+        tags.append({"tipo": "optativa", "cor": "accent",
+                     "texto": f"Optativa{f' · {creditos} cr' if creditos else ''}"})
+    return {"choques": lista, "tags": tags}
+
+
 def contar_problemas(a: dom.AnaliseSemestre) -> int:
     return len(a.conflitos) + len(a.pendencias) + int(a.carga.sobrecarga)
 
 
-def serializar_semestre(a: dom.AnaliseSemestre, disciplinas: Mapping[int, Disciplina]) -> dict:
+def serializar_semestre(a: dom.AnaliseSemestre, disciplinas: Mapping[int, Disciplina],
+                        codigo_turma: Mapping[int, str] | None = None, checa_disponibilidade: bool = False,
+                        junto_com: Mapping[int, tuple[int, ...]] | None = None) -> dict:
+    codigo_turma = codigo_turma or {}
+    junto_com = junto_com or {}
     def conflito(c: Conflito) -> dict:
         s = c.sobreposicoes[0]   # um exemplo basta para a mensagem
         return {
@@ -121,9 +173,14 @@ def serializar_semestre(a: dom.AnaliseSemestre, disciplinas: Mapping[int, Discip
             "horario_b": f"{_hhmm(s.b.inicio)}–{_hhmm(s.b.fim)}",
         }
 
+    n_choques = sum(len(m.choques) for m in (a.marcas or {}).values()) // 2   # cada choque aparece nos 2 lados
     return {
         "posicao": a.posicao,
+        "n_choques": n_choques,
+        "choques_texto": f"{n_choques} choque{'s' if n_choques > 1 else ''}" if n_choques else None,
         "creditos": a.carga.creditos, "limite_creditos": a.carga.limite,
+        "creditos_no_limite": a.carga.creditos_no_limite,
+        "creditos_fora_do_limite": a.carga.creditos - a.carga.creditos_no_limite,
         "sobrecarga": a.carga.sobrecarga,
         "disciplinas_sem_creditos": list(a.carga.disciplinas_sem_creditos),
         "conflitos": [conflito(c) for c in a.conflitos],
@@ -141,4 +198,17 @@ def serializar_semestre(a: dom.AnaliseSemestre, disciplinas: Mapping[int, Discip
             {"disciplina_id": i.disciplina_id, "turma_id": i.turma_id, "motivo": i.motivo}
             for i in a.invalidos
         ],
+        # disciplina → tags prontas (mesma regra e texto do simulador)
+        "marcas": {
+            str(d): {
+                **marcas_do_item(m.choques, m.bate_indisponivel, "desconhecido" if m.sem_horario else
+                                 ("real" if m.firme else "projetado"),
+                                 disciplinas[d].tipo, disciplinas[d].creditos, disciplinas, m.nao_cabe,
+                                 codigo_turma.get(m.turma_que_cabe), checa_disponibilidade,
+                                 junto_com.get(d, ())),
+                "turma_que_cabe": m.turma_que_cabe, "nao_cabe": m.nao_cabe,
+                "turma_sugerida": m.turma_sugerida, "turma_projetada": m.turma_projetada,
+            }
+            for d, m in (a.marcas or {}).items() if d in disciplinas
+        },
     }

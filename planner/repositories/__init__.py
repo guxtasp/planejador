@@ -9,11 +9,12 @@ from .curso import CursoRepository
 from .disciplina import DisciplinaRepository
 from .historico import HistoricoRepository
 from .plano import PlanoRepository
+from .preferencia import PreferenciaRepository
 from .requisito import RequisitoRepository
 from .turma import TurmaRepository
 from .usuario import UsuarioRepository
 
 __all__ = [
     "RepositorioBase", "CursoRepository", "DisciplinaRepository", "HistoricoRepository",
-    "PlanoRepository", "RequisitoRepository", "TurmaRepository", "UsuarioRepository",
+    "PlanoRepository", "PreferenciaRepository", "RequisitoRepository", "TurmaRepository", "UsuarioRepository",
 ]

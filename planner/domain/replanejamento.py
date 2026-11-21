@@ -36,16 +36,26 @@ class ResultadoReplano:
     reprovou_em: Mapping[int, int]           # id → índice em que reprovou (só as simuladas)
 
 
+Limite = int | None | Callable[[int], "int | None"]   # teto fixo ou por índice de semestre (0 = trancado)
+
+
 def _requisitos_ok(
     disciplina_id: int,
     requisitos: Mapping[int, Sequence[Requisito]],
     concluidas: Collection[int],
     no_semestre: Collection[int],
+    grupos: dict | None = None,
 ) -> bool:
-    for tipo, alternativas in agrupar_requisitos(requisitos.get(disciplina_id, ())):
-        base = set(concluidas) | (set(no_semestre) if tipo == REQ_CO else set())
-        if not base.intersection(alternativas):
-            return False
+    if grupos is not None:
+        termos = grupos.get(disciplina_id)
+        if termos is None:
+            termos = grupos[disciplina_id] = agrupar_requisitos(requisitos.get(disciplina_id, ()))
+    else:
+        termos = agrupar_requisitos(requisitos.get(disciplina_id, ()))
+    for tipo, alternativas in termos:
+        if any(a in concluidas or (tipo == REQ_CO and a in no_semestre) for a in alternativas):
+            continue
+        return False
     return True
 
 
@@ -54,16 +64,33 @@ def replanejar(
     oferta: Oferta,
     requisitos: Mapping[int, Sequence[Requisito]],
     creditos: Mapping[int, int | None],
-    limite_creditos: int | None,
+    limite_creditos: Limite,
     concluidas: Collection[int] = (),
     reprovar: Collection[int] = (),
     extra: int = EXTRA_PADRAO,
+    reprova: Callable[[int, int], bool] | None = None,
+    max_pesadas: int | None = None,
+    pesadas: Collection[int] = (),
+    grupos: dict | None = None,
+    juntas: Sequence[Collection[int]] = (),
 ) -> ResultadoReplano:
     """
     Executa `plano` (lista de conjuntos de ids por semestre).
 
     `reprovar`: disciplinas que reprovam na PRIMEIRA vez em que são cursadas.
+    `reprova(id, indice)`: sorteio de reprovação a cada tentativa (Monte Carlo; pode reprovar de novo).
+    `limite_creditos`: teto fixo ou função do índice (teto específico; 0 = período trancado).
+    `max_pesadas`/`pesadas`: no máximo N disciplinas "pesadas" por semestre (as demais esperam).
+    `grupos`: cache de requisitos agrupados, para quem chama muitas vezes.
+    `juntas`: grupos "cursar junto" OBRIGATÓRIOS: só entram no semestre se TODOS os membros pendentes
+    entram; e reprovar em um adia o grupo junto (os outros também voltam para a fila, sem contar
+    como reprovação deles).
     """
+    juntas = [set(g) for g in juntas]
+    limite_de = limite_creditos if callable(limite_creditos) else (lambda _t: limite_creditos)
+    pesadas = set(pesadas)
+    if grupos is None:
+        grupos = {}
     feitas = set(concluidas)
     pendentes = {i for s in plano for i in s}
     falhas = set(reprovar) & pendentes
@@ -78,33 +105,47 @@ def replanejar(
         candidatas = [c for c in adiadas if c not in planejadas] + [c for c in planejadas if c not in feitas]
         escolhidas: list[int] = []
         carga = 0
+        n_pesadas = 0
         restantes = list(dict.fromkeys(candidatas))
+        limite = limite_de(t)
 
-        mudou = True
+        mudou = limite != 0          # período trancado: nada é cursado, tudo espera
         while mudou:    # ponto fixo: um correquisito pode liberar o outro no mesmo semestre
             mudou = False
             for c in list(restantes):
                 # correquisito pode estar no mesmo semestre: já escolhido ou candidato ofertado agora
                 simultaneas = set(escolhidas) | {r for r in restantes if r != c and oferta(r, t)}
-                if not oferta(c, t) or not _requisitos_ok(c, requisitos, feitas, simultaneas):
+                if not oferta(c, t) or not _requisitos_ok(c, requisitos, feitas, simultaneas, grupos):
                     continue
                 cred = creditos.get(c) or 0
-                if limite_creditos is not None and escolhidas and carga + cred > limite_creditos:
+                if limite is not None and escolhidas and carga + cred > limite:
+                    continue
+                if max_pesadas is not None and c in pesadas and n_pesadas >= max_pesadas:
                     continue
                 escolhidas.append(c)
                 carga += cred
+                n_pesadas += c in pesadas
                 restantes.remove(c)
                 mudou = True
 
-        reprovadas = [c for c in escolhidas if c in falhas]
+        for g in juntas:            # tudo ou nada: membro sem o grupo completo espera
+            pendentes = g - feitas
+            no_sem = pendentes.intersection(escolhidas)
+            if no_sem and no_sem != pendentes:
+                for c in no_sem:
+                    escolhidas.remove(c)
+                    restantes.append(c)
+        reprovadas = [c for c in escolhidas if c in falhas or (reprova is not None and reprova(c, t))]
+        arrastadas = [c for g in juntas if g.intersection(reprovadas) for c in g
+                      if c in escolhidas and c not in reprovadas]
         for c in reprovadas:
             falhas.discard(c)
-            reprovou_em[c] = t
+            reprovou_em.setdefault(c, t)
         for c in escolhidas:
-            if c not in reprovadas:
+            if c not in reprovadas and c not in arrastadas:
                 feitas.add(c)
                 concluida_em[c] = t
-        adiadas = restantes + reprovadas
+        adiadas = restantes + reprovadas + arrastadas
         semestres.append(tuple(escolhidas))
         if escolhidas:
             fim = t
@@ -133,19 +174,24 @@ def cenarios_de_reprovacao(
     oferta: Oferta,
     requisitos: Mapping[int, Sequence[Requisito]],
     creditos: Mapping[int, int | None],
-    limite_creditos: int | None,
+    limite_creditos: Limite,
     concluidas: Collection[int] = (),
     extra: int = EXTRA_PADRAO,
+    max_pesadas: int | None = None,
+    pesadas: Collection[int] = (),
+    juntas: Sequence[Collection[int]] = (),
 ) -> tuple[ResultadoReplano, tuple[CenarioReprovacao, ...]]:
     """
     Base (ninguém reprova) e um cenário por disciplina do plano.
     O atraso é comparado com a BASE (que já adia o que não cabe), não com o plano bruto:
     mede o custo da reprovação, não os problemas que o plano já tinha.
     """
-    base = replanejar(plano, oferta, requisitos, creditos, limite_creditos, concluidas, (), extra)
+    grupos: dict = {}
+    kw = dict(max_pesadas=max_pesadas, pesadas=pesadas, grupos=grupos, juntas=juntas)
+    base = replanejar(plano, oferta, requisitos, creditos, limite_creditos, concluidas, (), extra, **kw)
     cenarios = []
     for d in sorted({i for s in plano for i in s}):
-        r = replanejar(plano, oferta, requisitos, creditos, limite_creditos, concluidas, (d,), extra)
+        r = replanejar(plano, oferta, requisitos, creditos, limite_creditos, concluidas, (d,), extra, **kw)
         if d not in r.reprovou_em:      # nunca chegou a ser cursada (plano com problema): sem cenário
             continue
         reoferta = r.concluida_em.get(d)

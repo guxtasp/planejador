@@ -45,6 +45,18 @@ class CursoRepository(RepositorioBase):
         ).all())
         return {i: (discs.get(i, 0), turmas.get(i, 0)) for i in curso_ids}
 
+    def listar_do_dono_com_codigos(self, dono_id: int | None) -> list[tuple[Curso, list[str]]]:
+        """Cursos do dono com os códigos das suas disciplinas (2 consultas). `None` = os cursos sem dono."""
+        dono = Curso.dono_id.is_(None) if dono_id is None else Curso.dono_id == dono_id
+        cursos = list(self.sessao.scalars(select(Curso).where(dono).order_by(Curso.id)))
+        if not cursos:
+            return []
+        codigos: dict[int, list[str]] = {c.id: [] for c in cursos}
+        for cid, codigo in self.sessao.execute(
+                select(Disciplina.curso_id, Disciplina.codigo).where(Disciplina.curso_id.in_(list(codigos)))):
+            codigos[cid].append(codigo)
+        return [(c, codigos[c.id]) for c in cursos]
+
     def obter_por_nome(self, nome: str, dono_id: int | None) -> Curso | None:
         """Busca um curso pelo nome entre os do mesmo dono (`None` = sem dono)."""
         dono = Curso.dono_id.is_(None) if dono_id is None else Curso.dono_id == dono_id

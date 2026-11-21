@@ -15,7 +15,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Mapping, Sequence
 
+from .alocacao import ChoqueItem, alocar_turmas, choques_por_disciplina
 from .carga import AvaliacaoCarga, avaliar_carga
+from .semana import PreferenciasSemana, turma_bate_indisponivel
 from .conflitos import Conflito, Selecao, detectar_conflitos
 from .entidades import Disciplina, Encontro, Requisito, Turma
 from .requisitos import ProblemaPlano, verificar_plano
@@ -33,12 +35,32 @@ class ItemPlano:
     # Horários que o ALUNO definiu (sem depender de quadro importado). Se houver,
     # valem no lugar de `turma_id`: viram uma turma própria já escolhida.
     encontros_livres: tuple[Encontro, ...] = ()
+    # A turma foi escolhida pelo Rumo: não prende a alocação (a melhor combinação pode trocá-la).
+    turma_auto: bool = False
 
 
 @dataclass(frozen=True)
 class SemestrePlano:
     itens: tuple[ItemPlano, ...] = ()
     periodo_letivo: str | None = None   # "AAAA/N"; sem ele a oferta é desconhecida
+
+
+@dataclass(frozen=True)
+class MarcasItem:
+    """
+    O que o cartão da disciplina mostra no Planejamento/Calendário — mesma regra do simulador:
+    choques pela alocação exata do semestre (só os que nenhuma turma evita), disponibilidade e
+    "sem horário" (choque/disponibilidade não verificados).
+    """
+
+    choques: tuple[ChoqueItem, ...] = ()
+    bate_indisponivel: bool = False   # a turma escolhida (ou a única possível) cai num horário indisponível
+    nao_cabe: bool = False            # NENHUMA turma do período cabe na disponibilidade
+    turma_que_cabe: int | None = None # a escolhida bate na disponibilidade e esta outra cabe
+    turma_sugerida: int | None = None # a turma da melhor combinação do semestre (só com quadro real)
+    turma_projetada: int | None = None # período sem quadro: a turma (de outro período) usada como estimativa
+    sem_horario: bool = False         # sem turma/horário conhecido: nada pôde ser checado
+    firme: bool = True                # horário do quadro real/próprio (False = projetado)
 
 
 @dataclass(frozen=True)
@@ -56,6 +78,7 @@ class AnaliseSemestre:
     pendencias: tuple[ProblemaPlano, ...]
     sem_turma_escolhida: tuple[int, ...]           # há oferta, falta escolher
     invalidos: tuple[ItemInvalido, ...]
+    marcas: Mapping[int, MarcasItem] = None        # disciplina → marcas do cartão
 
 
 def _ofertadas(
@@ -105,6 +128,8 @@ def _normalizar_semestre(
             motivo = SEMESTRE_SEM_PERIODO if semestre.periodo_letivo is None else TURMA_INVALIDA
             invalidos.append(ItemInvalido(item.disciplina_id, motivo, escolhida))
             escolhida = None   # a disciplina fica no plano, só sem turma
+        if item.turma_auto:
+            escolhida = None   # escolha do Rumo: a alocação do semestre decide de novo
         selecoes.append(Selecao(item.disciplina_id, ofertadas, escolhida))
     return selecoes, invalidos
 
@@ -117,6 +142,7 @@ def analisar_plano(
     limite_creditos: int | None,
     aprovadas: Sequence[int] = (),
     cursando: Sequence[int] = (),
+    preferencias_semana: PreferenciasSemana | None = None,
 ) -> tuple[AnaliseSemestre, ...]:
     """Uma `AnaliseSemestre` por semestre do plano, na mesma ordem."""
     normalizados = [
@@ -145,6 +171,51 @@ def analisar_plano(
                     if s.turmas_ofertadas and s.turma_escolhida_id is None
                 ),
                 invalidos=tuple(invalidos),
+                marcas=marcas_do_semestre(selecoes, preferencias_semana, turmas_por_disciplina,
+                                          semestres[posicao - 1].periodo_letivo),
             )
         )
     return tuple(resultado)
+
+
+def marcas_do_semestre(
+    selecoes: Sequence[Selecao],
+    semana: PreferenciasSemana | None,
+    turmas_por_disciplina: Mapping[int, Sequence[Turma]] | None = None,
+    periodo: str | None = None,
+) -> dict[int, MarcasItem]:
+    """
+    Marcas de cada disciplina do semestre (ver `MarcasItem`). Mesma regra do simulador: período sem
+    quadro publicado usa a PROJEÇÃO do último período de mesma paridade (choque vira "possível").
+    """
+    from .periodicidade import HORARIO_REAL, turmas_para_periodo
+    firmes = {s.disciplina_id for s in selecoes if s.turmas_ofertadas}
+    if periodo and turmas_por_disciplina:
+        projetadas = []
+        for s in selecoes:
+            if s.turmas_ofertadas:
+                projetadas.append(s)
+                continue
+            cand, origem = turmas_para_periodo(turmas_por_disciplina.get(s.disciplina_id, ()), periodo)
+            projetadas.append(Selecao(s.disciplina_id, cand if origem != HORARIO_REAL else (), None))
+        selecoes = projetadas
+    aloc = alocar_turmas(selecoes, preferencias=semana)
+    choques = choques_por_disciplina(aloc.colisoes, firmes)   # quadro real (ou horário próprio) = firme
+    saida: dict[int, MarcasItem] = {}
+    for s in selecoes:
+        turmas = s.turmas_ofertadas
+        if not turmas:
+            saida[s.disciplina_id] = MarcasItem(sem_horario=True)
+            continue
+        escolhida = next((t for t in turmas if t.id == aloc.escolha.get(s.disciplina_id)), None)
+        bate = escolhida is not None and turma_bate_indisponivel(escolhida.encontros, semana)
+        livres = [t for t in turmas if not turma_bate_indisponivel(t.encontros, semana)]
+        tem_bloco = bool(semana and semana.indisponiveis)
+        saida[s.disciplina_id] = MarcasItem(
+            choques=choques.get(s.disciplina_id, ()), bate_indisponivel=bate, firme=s.disciplina_id in firmes,
+            nao_cabe=tem_bloco and not livres,
+            turma_que_cabe=livres[0].id if bate and livres and s.disciplina_id in firmes else None,
+            turma_sugerida=aloc.escolha.get(s.disciplina_id) if s.disciplina_id in firmes else None,
+            turma_projetada=aloc.escolha.get(s.disciplina_id) if s.disciplina_id not in firmes else None,
+        )
+    return saida

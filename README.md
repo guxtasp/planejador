@@ -1,4 +1,4 @@
-# Trilha — planejador acadêmico (multi-curso)
+# Rumo — planejador acadêmico (multi-curso)
 
 Monte o plano de matrícula do seu curso: importe a matriz curricular por CSV (`docs/IMPORTACAO.md`), registre seu histórico,
 arraste disciplinas entre semestres, escolha turmas **ou defina seus próprios horários** e veja conflitos, requisitos e carga no calendário.

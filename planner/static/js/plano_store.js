@@ -156,6 +156,22 @@ const Planos = (() => {
       return true;
     },
 
+    // Cópia do plano atual (para "Desfazer") e volta a ela, regravando no servidor.
+    instantaneo() { const p = atual(); return p ? JSON.parse(JSON.stringify(p)) : null; },
+    restaurar(copia) {
+      const i = lista.findIndex(p => p.id === copia?.id);
+      if (i < 0) return false;
+      lista[i] = JSON.parse(JSON.stringify(copia));
+      marcar(lista[i]);
+      return true;
+    },
+    // Conteúdo no formato do servidor (para recriar um plano excluído).
+    conteudo(id) { const p = lista.find(x => x.id === id); return p ? paraServidor(p) : null; },
+
+    removerSemestre(semId) {
+      editar(p => { p.semestres = p.semestres.filter(s => s.id !== semId); });
+    },
+
     adicionarSemestre() {
       editar(p => p.semestres.push(novoSemestre(`Semestre ${p.semestres.length + 1}`)));
     },
@@ -181,10 +197,30 @@ const Planos = (() => {
       editar(() => { const s = semestre(semId); if (s) s.itens = s.itens.filter(i => i.disciplina_id !== discId); });
     },
 
+    // Turma escolhida pela PESSOA: fica fixa (o Rumo não troca).
     definirTurma(semId, discId, turmaId) {
       editar(() => {
         const item = semestre(semId)?.itens.find(i => i.disciplina_id === discId);
-        if (item) { item.turma_id = turmaId || null; if (item.turma_id) delete item.encontros_livres; }   // turma OU horários próprios
+        if (item) {
+          item.turma_id = turmaId || null; delete item.turma_auto;
+          if (item.turma_id) delete item.encontros_livres;   // turma OU horários próprios
+        }
+      });
+    },
+
+    // Turmas escolhidas pelo Rumo (melhor combinação): [[semId, discId, turmaId], …] numa gravação só.
+    definirTurmasAuto(trocas) {
+      editar(() => trocas.forEach(([semId, discId, turmaId]) => {
+        const item = semestre(semId)?.itens.find(i => i.disciplina_id === discId);
+        if (item) { item.turma_id = turmaId; item.turma_auto = true; delete item.encontros_livres; }
+      }));
+    },
+
+    // Devolve a escolha da turma ao Rumo (a próxima análise aplica a melhor).
+    turmaAutomatica(semId, discId) {
+      editar(() => {
+        const item = semestre(semId)?.itens.find(i => i.disciplina_id === discId);
+        if (item) { item.turma_auto = true; if (!item.turma_id) item.turma_id = null; delete item.encontros_livres; }
       });
     },
 

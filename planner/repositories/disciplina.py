@@ -4,7 +4,7 @@ from __future__ import annotations
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
-from ..models import Disciplina, Turma
+from ..models import Disciplina, Requisito, Turma
 from .base import RepositorioBase
 
 
@@ -50,3 +50,15 @@ class DisciplinaRepository(RepositorioBase):
     def mapa_por_codigo(self, curso_id: int) -> dict[str, Disciplina]:
         """`{codigo: Disciplina}` do curso — usado pelos importadores para resolver referências."""
         return {d.codigo: d for d in self.listar_do_curso(curso_id)}
+
+    def adicionar(self, disciplina: Disciplina) -> Disciplina:
+        self.sessao.add(disciplina)
+        self.sessao.flush()                     # garante o id antes de gravar requisitos
+        return disciplina
+
+    def substituir_requisitos(self, disciplina: Disciplina, requisitos) -> None:
+        """Troca a lista de requisitos da disciplina por `[(requisito_id, tipo, grupo_alt)]`."""
+        disciplina.requisitos.clear()
+        self.sessao.flush()                     # apaga antes de inserir (o par é único)
+        for rid, tipo, grupo in requisitos:
+            disciplina.requisitos.append(Requisito(requisito_id=rid, tipo=tipo, grupo_alt=grupo))

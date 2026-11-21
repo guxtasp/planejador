@@ -53,7 +53,8 @@ usuario(id, email, ...)
 historico(id, usuario_id, disciplina_id, status, periodo_letivo, nota)   -- N tentativas
 plano(id, usuario_id, curso_id, nome)
 plano_semestre(id, plano_id, ordem, label, periodo_letivo NULL)
-plano_item(semestre_id, disciplina_id, turma_id NULL)
+plano_item(semestre_id, disciplina_id, turma_id NULL, turma_auto, encontros_livres NULL)   -- turma_auto = escolhida pelo Rumo
+preferencia_aluno(usuario_id, curso_id, dados JSON)   -- disponibilidade, teto por período, trancamento, pesadas, cursar junto
 ```
 
 Princípios: catálogo (estável) × oferta (semestral) × usuário (individual); `NULL` = desconhecido, nunca zero.
@@ -92,7 +93,7 @@ recomendações. **Dizer se quiser mudar antes da etapa indicada.**
 |---------|----------|------------------|
 | Autenticação | **Supabase Auth** (sem senha), verificado no servidor; sessão própria em cookie. Substituiu o link mágico próprio da 5A (não há servidor de e-mail). Google = nova opção no Supabase | — |
 | Compartilhar cursos | privado por padrão, opção de publicar | 3C |
-| Teoria/prática independentes | fora da v1 (turma combinada) | 4B |
+| Teoria/prática independentes | **feito**: coluna opcional `componente` (teorica/pratica) em turmas.csv; a matrícula é uma teórica + uma prática do mesmo período, combinadas numa opção com id negativo (`domain/componentes.py`) | — |
 | Optativas | "X créditos de uma lista" (`creditos_optativos_exigidos`); grupos de optativas depois | 2 |
 | Provedor Postgres | **Supabase** (já traz Auth, reduz a 5A); Neon é alternativa válida | 5A |
 | Framework | manter Flask + frontend vanilla | — |

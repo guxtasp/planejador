@@ -59,6 +59,7 @@ function fluxograma() {
                 ${st ? `<span class="badge ${st.selo} fd-badge" style="font-size:9px">${st.rotulo}</span>` : ''}
                 ${sit?.reprovada_antes ? '<span class="badge badge-red" style="font-size:9px">↻ Reprovada</span>' : ''}
                 <span class="tag" style="font-size:9px">${credStr(d.creditos)}</span>
+                ${seloOferta(d)}
               </div>
             </div>`;
           }).join('')}

@@ -44,7 +44,10 @@ a{color:var(--accent2)}
 .passos{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;list-style:none;counter-reset:p}
 .passos li{counter-increment:p;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:18px;position:relative}
 .passos li::before{content:counter(p);display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:var(--accent);color:var(--on-accent);font-weight:700;font-size:14px;margin-bottom:10px}
+.passos li.antes{counter-increment:none}
+.passos li.antes::before{content:"▶";font-size:11px}
 .passos h3{font-size:16px;margin-bottom:4px}
+.passos h3 small{font-weight:400;font-size:12px;color:var(--text3)}
 .passos p{font-size:13px}
 .passos .dica{display:block;margin-top:8px;font-size:12px;color:var(--text3)}
 
@@ -83,20 +86,23 @@ details p{font-size:14px;margin-top:8px}
 
 <section class="secao" aria-labelledby="como">
   <h2 id="como">Como funciona</h2>
-  <p>Quatro passos, nesta ordem (o menu do app segue a mesma sequência). Dá para parar e continuar depois: tudo fica salvo na sua conta.</p>
+  <p>Primeiro você traz o curso; depois, quatro passos que o menu do app segue na mesma ordem. Só o curso é obrigatório: o resto melhora o resultado, e dá para parar e continuar depois. Tudo fica salvo na sua conta.</p>
   <ol class="passos">
-    <li><h3>Traga o seu curso</h3>
-      <p>Envie a matriz curricular (disciplinas, créditos, pré-requisitos) em planilhas CSV. Não tem? A tela tem um texto pronto para pedir a uma IA que monte as planilhas a partir do PDF do curso.</p>
-      <span class="dica">Você revisa tudo numa prévia antes de gravar.</span></li>
-    <li><h3>Conte o que já cursou</h3>
-      <p>Marque as disciplinas aprovadas e as que está cursando. É assim que o Rumo sabe o que já está feito e o que você pode cursar agora.</p>
-      <span class="dica">Sem isso, nada aparece como concluído.</span></li>
-    <li><h3>Monte e confira o plano</h3>
-      <p>Arraste disciplinas para os próximos semestres. Cada semestre mostra créditos, pré-requisitos faltando e choques de horário, e o calendário mostra a sua semana.</p>
-      <span class="dica">Você pode ter vários planos e comparar.</span></li>
-    <li><h3>Teste o futuro</h3>
-      <p>O Simulador projeta o seu plano nos próximos semestres: mostra os riscos de cada um, a formatura prevista e o que acontece se você reprovar. Se quiser, sugere um plano melhor.</p>
-      <span class="dica">Diga quantas optativas ainda precisa: elas não atrasam a formatura sem você ver.</span></li>
+    <li class="antes"><h3>Traga o seu curso</h3>
+      <p>Envie a matriz curricular (disciplinas, créditos, pré-requisitos e, se tiver, turmas) em planilhas CSV. Não tem? A tela tem um texto pronto para pedir a uma IA que monte as planilhas a partir do PDF do curso.</p>
+      <span class="dica">Você revisa numa prévia antes de gravar, e depois pode corrigir qualquer disciplina na tela Disciplinas.</span></li>
+    <li><h3>Histórico <small>(opcional)</small></h3>
+      <p>Marque o que já cursou, ou cole a tabela do sistema acadêmico (também aceita CSV). É assim que o Rumo sabe o que falta.</p>
+      <span class="dica">Calouro? Pule: o plano começa do zero.</span></li>
+    <li><h3>Minha rotina <small>(opcional)</small></h3>
+      <p>Marque na grade os horários em que não pode ter aula (trabalho, estágio) e o seu ritmo. O Rumo responde na hora se o curso cabe nessa rotina.</p>
+      <span class="dica">Vale para todo o app: turmas, sugestão e simulador.</span></li>
+    <li><h3>Planejamento</h3>
+      <p>Peça uma sugestão de plano ou monte o seu arrastando disciplinas. O Rumo escolhe as turmas que cabem na sua semana (você pode trocar) e mostra choques e pré-requisitos faltando.</p>
+      <span class="dica">O Calendário mostra a semana de cada semestre.</span></li>
+    <li><h3>Simulador</h3>
+      <p>Testa o plano nos próximos semestres: formatura prevista, riscos, o que acontece se você reprovar e a chance de formar no prazo.</p>
+      <span class="dica">Ele avalia; quem monta o plano é o Planejamento.</span></li>
   </ol>
 </section>
 

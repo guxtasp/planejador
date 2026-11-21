@@ -117,6 +117,7 @@ FORMATOS:
 - periodicidade (disciplinas.csv): sempre | impar | par = em que períodos letivos a disciplina é oferecida (impar = só AAAA/1, par = só AAAA/2). TODA disciplina precisa de periodicidade: se o documento não disser, deixe vazio e liste o código ao final para eu informar (nunca assuma \"sempre\"). No quadro de horários, quem só tem turma em períodos de uma paridade é dessa paridade.
 - horarios (turmas.csv): "SEG 16:00-18:00 | QUI 14:00-16:00". O "|" separa encontros da MESMA turma (todos obrigatórios).
   Alternativas de matrícula (turma T1 ou T2) são LINHAS diferentes, nunca "|". Dias: SEG TER QUA QUI SEX SAB DOM.
+- componente (turmas.csv, opcional): se o quadro separa TEORIA e PRÁTICA em turmas diferentes (ex.: T1 teórica; P1 e P2 práticas, e o aluno se matricula em uma de cada), marque teorica ou pratica em cada linha. Turma que já inclui tudo: deixe vazio.
 - codigo_turma é obrigatório em turmas.csv (T1, T2, P1...). Todo código em requisitos/turmas deve existir em disciplinas.csv.
 
 EXEMPLOS DE FORMATO (dados fictícios):

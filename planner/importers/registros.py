@@ -59,3 +59,4 @@ class TurmaCsv:
     vagas: int | None = None
     encontros: tuple[Encontro, ...] = ()
     local: str | None = None  # sala; vale para todos os encontros da turma
+    componente: str | None = None  # teorica | pratica; vazio = turma completa

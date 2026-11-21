@@ -142,6 +142,7 @@ def test_plano_nao_vale_em_outro_curso_do_mesmo_usuario(client_logado, curso_peq
 
     dados = {n: (io.BytesIO(t.replace("Curso Pequeno", "Outro Curso").encode()), n)
              for n, t in CSVS_CURSO_PEQUENO.items()}
+    dados["criar_novo"] = "1"     # mesmas disciplinas: sem isso a importação perguntaria se é o mesmo curso
     r = client_logado.post("/api/importacao/confirmar", data=dados, content_type="multipart/form-data")
     outro_id = r.get_json()["relatorio"]["curso_id"]
     p = criar(client_logado, curso_pequeno)

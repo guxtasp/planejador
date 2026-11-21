@@ -37,8 +37,14 @@ def test_confirmar_e_repetir(client):
     assert r.status_code == 201
     rel = r.get_json()["relatorio"]
     assert rel["curso_criado"] and rel["por_arquivo"]["disciplinas.csv"]["criados"] == 49
+    # sem dizer o destino: o curso parecido aparece e a pessoa precisa escolher (nunca junta em silêncio)
     outra = client.post("/api/importacao/confirmar", data=multipart(), content_type="multipart/form-data")
-    assert outra.status_code == 422 and "Nada a importar" in outra.get_json()["erro"]
+    assert outra.status_code == 409
+    candidato = outra.get_json()["detalhes"]["destino"]["candidatos"][0]
+    assert candidato["curso_id"] == rel["curso_id"] and candidato["em_comum"] == 49
+    mesma = client.post("/api/importacao/confirmar", data={**multipart(), "curso_id": str(rel["curso_id"])},
+                        content_type="multipart/form-data")
+    assert mesma.status_code == 422 and "Nada a importar" in mesma.get_json()["erro"]
 
 
 def test_confirmar_com_erro_devolve_422_com_a_previa(client):
